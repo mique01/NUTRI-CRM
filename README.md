@@ -17,7 +17,7 @@ CRM para nutricionistas construido con `React + Vite + Supabase`, listo para sub
 
 1. Creá un proyecto nuevo en [Supabase](https://supabase.com/).
 2. Abrí `SQL Editor`.
-3. Pegá completo el archivo [supabase/setup.sql](/C:/Users/Miqueas00/Desktop/crm%20cami/nourish-dashboard-main/supabase/setup.sql).
+3. Pegá completo el archivo [supabase/setup.sql](/C:/Users/Miqueas00/Desktop/crm%20cami/supabase/setup.sql).
 4. Ejecutalo una vez.
 
 ## 2. Configurar Google OAuth en Supabase
@@ -35,7 +35,7 @@ CRM para nutricionistas construido con `React + Vite + Supabase`, listo para sub
 
 ## 3. Variables de entorno
 
-Creá un archivo `.env.local` basado en [.env.example](/C:/Users/Miqueas00/Desktop/crm%20cami/nourish-dashboard-main/.env.example):
+Creá un archivo `.env.local` basado en [.env.example](/C:/Users/Miqueas00/Desktop/crm%20cami/.env.example):
 
 ```bash
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
@@ -71,15 +71,15 @@ La app queda en `http://localhost:8080`.
 5. Deployá.
 6. Volvé a Supabase y actualizá las URLs OAuth productivas si cambió el dominio.
 
-El archivo [vercel.json](/C:/Users/Miqueas00/Desktop/crm%20cami/nourish-dashboard-main/vercel.json) ya deja resueltas las rutas SPA.
+El archivo [vercel.json](/C:/Users/Miqueas00/Desktop/crm%20cami/vercel.json) ya deja resueltas las rutas SPA.
 
 ## Estructura importante
 
-- [src/lib/supabase.ts](/C:/Users/Miqueas00/Desktop/crm%20cami/nourish-dashboard-main/src/lib/supabase.ts): cliente Supabase.
-- [src/context/AuthContext.tsx](/C:/Users/Miqueas00/Desktop/crm%20cami/nourish-dashboard-main/src/context/AuthContext.tsx): sesión, perfil y consultorio actual.
-- [src/services](/C:/Users/Miqueas00/Desktop/crm%20cami/nourish-dashboard-main/src/services): servicios tipados del backend.
-- [src/hooks/use-crm-data.ts](/C:/Users/Miqueas00/Desktop/crm%20cami/nourish-dashboard-main/src/hooks/use-crm-data.ts): query hooks.
-- [supabase/setup.sql](/C:/Users/Miqueas00/Desktop/crm%20cami/nourish-dashboard-main/supabase/setup.sql): tablas, funciones, RLS y storage.
+- [src/lib/supabase.ts](/C:/Users/Miqueas00/Desktop/crm%20cami/src/lib/supabase.ts): cliente Supabase.
+- [src/context/AuthContext.tsx](/C:/Users/Miqueas00/Desktop/crm%20cami/src/context/AuthContext.tsx): sesión, perfil y consultorio actual.
+- [src/services](/C:/Users/Miqueas00/Desktop/crm%20cami/src/services): servicios tipados del backend.
+- [src/hooks/use-crm-data.ts](/C:/Users/Miqueas00/Desktop/crm%20cami/src/hooks/use-crm-data.ts): query hooks.
+- [supabase/setup.sql](/C:/Users/Miqueas00/Desktop/crm%20cami/supabase/setup.sql): tablas, funciones, RLS y storage.
 
 ## Pendiente para una segunda etapa
 
