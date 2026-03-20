@@ -303,7 +303,7 @@ declare
   current_profile_id uuid;
 begin
   if auth.uid() is null then
-    raise exception 'Debes iniciar sesión.';
+    raise exception 'Debes iniciar sesion.';
   end if;
 
   current_profile_id := auth.uid();
@@ -382,11 +382,18 @@ declare
   created_clinic public.clinics;
 begin
   if auth.uid() is null then
-    raise exception 'Debes iniciar sesión.';
+    raise exception 'Debes iniciar sesion.';
   end if;
 
   if trim(coalesce(clinic_name, '')) = '' then
     raise exception 'El nombre del consultorio es obligatorio.';
+  end if;
+
+  if exists (
+    select 1
+    from public.clinics
+  ) then
+    raise exception 'El consultorio principal ya fue creado. Pedi una invitacion desde Supabase.';
   end if;
 
   if exists (
@@ -422,7 +429,7 @@ declare
   normalized_email text;
 begin
   if auth.uid() is null then
-    raise exception 'Debes iniciar sesión.';
+    raise exception 'Debes iniciar sesion.';
   end if;
 
   normalized_email := lower(trim(coalesce(invited_email, '')));
@@ -438,7 +445,7 @@ begin
   limit 1;
 
   if current_membership is null then
-    raise exception 'No perteneces a ningún consultorio.';
+    raise exception 'No perteneces a ningun consultorio.';
   end if;
 
   if current_membership.role <> 'admin' then
@@ -446,8 +453,9 @@ begin
   end if;
 
   update public.clinic_invites
-  set status = 'revoked',
-      updated_at = timezone('utc', now())
+  set
+    status = 'revoked',
+    updated_at = timezone('utc', now())
   where clinic_id = current_membership.clinic_id
     and lower(invited_email) = normalized_email
     and status = 'pending';
@@ -481,7 +489,7 @@ declare
   resulting_membership public.clinic_memberships;
 begin
   if auth.uid() is null then
-    raise exception 'Debes iniciar sesión.';
+    raise exception 'Debes iniciar sesion.';
   end if;
 
   current_profile := public.ensure_current_profile();
@@ -495,20 +503,174 @@ begin
   limit 1;
 
   if target_invite is null then
-    raise exception 'La invitación no existe o ya fue usada.';
+    raise exception 'La invitacion no existe o ya fue usada.';
   end if;
 
   if target_invite.expires_at < timezone('utc', now()) then
     update public.clinic_invites
-    set status = 'expired',
-        updated_at = timezone('utc', now())
+    set
+      status = 'expired',
+      updated_at = timezone('utc', now())
     where id = target_invite.id;
 
-    raise exception 'La invitación está vencida.';
+    raise exception 'La invitacion esta vencida.';
   end if;
 
   if lower(target_invite.invited_email) <> normalized_email then
-    raise exception 'La invitación fue emitida para otro email.';
+    raise exception 'La invitacion fue emitida para otro email.';
+  end if;
+
+  insert into public.clinic_memberships (clinic_id, profile_id, role)
+  values (target_invite.clinic_id, current_profile, 'nutritionist')
+  on conflict (clinic_id, profile_id) do update
+  set updated_at = timezone('utc', now())
+  returning * into resulting_membership;
+
+  update public.clinic_invites
+  set
+    status = 'accepted',
+    accepted_at = timezone('utc', now()),
+    accepted_by = current_profile,
+    updated_at = timezone('utc', now())
+  where id = target_invite.id;
+
+  return resulting_membership;
+end;
+$$;
+
+create or replace function public.get_my_access_state()
+returns table (
+  access_status text,
+  clinic_id uuid,
+  clinic_name text,
+  invited_email text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_membership public.clinic_memberships;
+  target_invite public.clinic_invites;
+  target_clinic_name text;
+begin
+  if auth.uid() is null then
+    raise exception 'Debes iniciar sesion.';
+  end if;
+
+  perform public.ensure_current_profile();
+
+  select *
+  into current_membership
+  from public.clinic_memberships
+  where profile_id = auth.uid()
+  order by created_at asc
+  limit 1;
+
+  if current_membership is not null then
+    return query
+    select
+      'member'::text,
+      current_membership.clinic_id,
+      clinics.name,
+      app.current_user_email()
+    from public.clinics
+    where clinics.id = current_membership.clinic_id;
+    return;
+  end if;
+
+  select invites.*
+  into target_invite
+  from public.clinic_invites as invites
+  where lower(invites.invited_email) = app.current_user_email()
+    and invites.status = 'pending'
+  order by invites.created_at desc
+  limit 1;
+
+  if target_invite is not null then
+    select clinics.name
+    into target_clinic_name
+    from public.clinics
+    where clinics.id = target_invite.clinic_id;
+
+    if target_invite.expires_at < timezone('utc', now()) then
+      update public.clinic_invites
+      set
+        status = 'expired',
+        updated_at = timezone('utc', now())
+      where id = target_invite.id;
+    else
+      return query
+      select
+        'denied'::text,
+        target_invite.clinic_id,
+        target_clinic_name,
+        lower(target_invite.invited_email);
+      return;
+    end if;
+  end if;
+
+  if exists (
+    select 1
+    from public.clinics
+  ) then
+    return query
+    select
+      'denied'::text,
+      null::uuid,
+      null::text,
+      null::text;
+    return;
+  end if;
+
+  return query
+  select
+    'pending_bootstrap'::text,
+    null::uuid,
+    null::text,
+    null::text;
+end;
+$$;
+
+create or replace function public.accept_my_clinic_invite()
+returns public.clinic_memberships
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_profile uuid;
+  normalized_email text;
+  target_invite public.clinic_invites;
+  resulting_membership public.clinic_memberships;
+begin
+  if auth.uid() is null then
+    raise exception 'Debes iniciar sesion.';
+  end if;
+
+  current_profile := public.ensure_current_profile();
+  normalized_email := app.current_user_email();
+
+  select *
+  into target_invite
+  from public.clinic_invites
+  where lower(invited_email) = normalized_email
+    and status = 'pending'
+  order by created_at desc
+  limit 1;
+
+  if target_invite is null then
+    raise exception 'No existe una invitacion pendiente para este email.';
+  end if;
+
+  if target_invite.expires_at < timezone('utc', now()) then
+    update public.clinic_invites
+    set
+      status = 'expired',
+      updated_at = timezone('utc', now())
+    where id = target_invite.id;
+
+    raise exception 'La invitacion esta vencida.';
   end if;
 
   insert into public.clinic_memberships (clinic_id, profile_id, role)
@@ -761,196 +923,3 @@ using (
   bucket_id = 'medical-studies'
   and app.is_clinic_member((split_part(name, '/', 1))::uuid)
 );
-
-create or replace function public.bootstrap_clinic(clinic_name text)
-returns public.clinics
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  current_profile uuid;
-  created_clinic public.clinics;
-begin
-  if auth.uid() is null then
-    raise exception 'Debes iniciar sesiÃ³n.';
-  end if;
-
-  if trim(coalesce(clinic_name, '')) = '' then
-    raise exception 'El nombre del consultorio es obligatorio.';
-  end if;
-
-  if exists (
-    select 1
-    from public.clinics
-  ) then
-    raise exception 'El consultorio principal ya fue creado. PedÃ­ una invitaciÃ³n desde Supabase.';
-  end if;
-
-  if exists (
-    select 1
-    from public.clinic_memberships
-    where profile_id = auth.uid()
-  ) then
-    raise exception 'Tu usuario ya pertenece a un consultorio.';
-  end if;
-
-  current_profile := public.ensure_current_profile();
-
-  insert into public.clinics (name, created_by)
-  values (trim(clinic_name), current_profile)
-  returning * into created_clinic;
-
-  insert into public.clinic_memberships (clinic_id, profile_id, role)
-  values (created_clinic.id, current_profile, 'admin');
-
-  return created_clinic;
-end;
-$$;
-
-create or replace function public.get_my_access_state()
-returns table (
-  access_status text,
-  clinic_id uuid,
-  clinic_name text,
-  invited_email text
-)
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  current_membership public.clinic_memberships;
-  target_invite public.clinic_invites;
-  target_clinic_name text;
-begin
-  if auth.uid() is null then
-    raise exception 'Debes iniciar sesiÃ³n.';
-  end if;
-
-  perform public.ensure_current_profile();
-
-  select *
-  into current_membership
-  from public.clinic_memberships
-  where profile_id = auth.uid()
-  order by created_at asc
-  limit 1;
-
-  if current_membership is not null then
-    return query
-    select
-      'member'::text,
-      current_membership.clinic_id,
-      clinics.name,
-      app.current_user_email()
-    from public.clinics
-    where clinics.id = current_membership.clinic_id;
-    return;
-  end if;
-
-  select invites.*, clinics.name
-  into target_invite, target_clinic_name
-  from public.clinic_invites as invites
-  join public.clinics on clinics.id = invites.clinic_id
-  where lower(invites.invited_email) = app.current_user_email()
-    and invites.status = 'pending'
-  order by invites.created_at desc
-  limit 1;
-
-  if target_invite is not null then
-    if target_invite.expires_at < timezone('utc', now()) then
-      update public.clinic_invites
-      set status = 'expired',
-          updated_at = timezone('utc', now())
-      where id = target_invite.id;
-    else
-      return query
-      select
-        'denied'::text,
-        target_invite.clinic_id,
-        target_clinic_name,
-        lower(target_invite.invited_email);
-      return;
-    end if;
-  end if;
-
-  if exists (
-    select 1
-    from public.clinics
-  ) then
-    return query
-    select
-      'denied'::text,
-      null::uuid,
-      null::text,
-      null::text;
-    return;
-  end if;
-
-  return query
-  select
-    'pending_bootstrap'::text,
-    null::uuid,
-    null::text,
-    null::text;
-end;
-$$;
-
-create or replace function public.accept_my_clinic_invite()
-returns public.clinic_memberships
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  current_profile uuid;
-  normalized_email text;
-  target_invite public.clinic_invites;
-  resulting_membership public.clinic_memberships;
-begin
-  if auth.uid() is null then
-    raise exception 'Debes iniciar sesiÃ³n.';
-  end if;
-
-  current_profile := public.ensure_current_profile();
-  normalized_email := app.current_user_email();
-
-  select *
-  into target_invite
-  from public.clinic_invites
-  where lower(invited_email) = normalized_email
-    and status = 'pending'
-  order by created_at desc
-  limit 1;
-
-  if target_invite is null then
-    raise exception 'No existe una invitaciÃ³n pendiente para este email.';
-  end if;
-
-  if target_invite.expires_at < timezone('utc', now()) then
-    update public.clinic_invites
-    set status = 'expired',
-        updated_at = timezone('utc', now())
-    where id = target_invite.id;
-
-    raise exception 'La invitaciÃ³n estÃ¡ vencida.';
-  end if;
-
-  insert into public.clinic_memberships (clinic_id, profile_id, role)
-  values (target_invite.clinic_id, current_profile, 'nutritionist')
-  on conflict (clinic_id, profile_id) do update
-  set updated_at = timezone('utc', now())
-  returning * into resulting_membership;
-
-  update public.clinic_invites
-  set
-    status = 'accepted',
-    accepted_at = timezone('utc', now()),
-    accepted_by = current_profile,
-    updated_at = timezone('utc', now())
-  where id = target_invite.id;
-
-  return resulting_membership;
-end;
-$$;
