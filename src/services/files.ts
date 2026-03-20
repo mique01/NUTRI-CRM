@@ -57,7 +57,11 @@ async function uploadToBucket(bucketName: string, storagePath: string, file: Fil
 }
 
 async function removeFromBucket(bucketName: string, storagePath: string) {
-  await supabase.storage.from(bucketName).remove([storagePath]);
+  const { error } = await supabase.storage.from(bucketName).remove([storagePath]);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function listNutritionPlans(patientId: string) {
@@ -128,6 +132,18 @@ export async function getNutritionPlanDownloadUrl(storagePath: string) {
   return data.signedUrl;
 }
 
+export async function deleteNutritionPlan(planId: string, storagePath: string) {
+  assertSupabaseConfigured();
+
+  await removeFromBucket(NUTRITION_PLANS_BUCKET, storagePath);
+
+  const { error } = await supabase.from("nutrition_plans").delete().eq("id", planId);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function listMedicalStudies(patientId: string) {
   assertSupabaseConfigured();
 
@@ -195,4 +211,16 @@ export async function getMedicalStudyDownloadUrl(storagePath: string) {
   }
 
   return data.signedUrl;
+}
+
+export async function deleteMedicalStudy(studyId: string, storagePath: string) {
+  assertSupabaseConfigured();
+
+  await removeFromBucket(MEDICAL_STUDIES_BUCKET, storagePath);
+
+  const { error } = await supabase.from("medical_studies").delete().eq("id", studyId);
+
+  if (error) {
+    throw error;
+  }
 }

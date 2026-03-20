@@ -10,6 +10,7 @@ import Index from "@/pages/Index";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import PatientDetail from "@/pages/PatientDetail";
+import Patients from "@/pages/Patients";
 import Setup from "@/pages/Setup";
 
 const queryClient = new QueryClient({
@@ -117,6 +118,14 @@ const AppRoutes = () => (
         element={
           <ProtectedRoute>
             <Index />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patients"
+        element={
+          <ProtectedRoute>
+            <Patients />
           </ProtectedRoute>
         }
       />

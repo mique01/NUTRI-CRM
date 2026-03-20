@@ -47,7 +47,9 @@ export interface Patient {
   status: PatientStatus;
   createdAt: string;
   updatedAt: string;
+  alerts: string[];
   nextAppointmentAt: string | null;
+  lastAppointmentAt: string | null;
 }
 
 export interface PatientFormValues {
@@ -57,6 +59,7 @@ export interface PatientFormValues {
   profession: string;
   email: string;
   phone: string;
+  alerts: string;
   status: PatientStatus;
 }
 
@@ -116,6 +119,14 @@ export interface Appointment {
   syncState: SyncState;
 }
 
+export interface DashboardConsultation {
+  id: string;
+  patientId: string;
+  patientName: string;
+  startsAt: string;
+  status: AppointmentStatus;
+}
+
 export interface AppointmentFormValues {
   date: string;
   time: string;
@@ -169,6 +180,7 @@ export const emptyPatientFormValues: PatientFormValues = {
   profession: "",
   email: "",
   phone: "",
+  alerts: "",
   status: "active",
 };
 

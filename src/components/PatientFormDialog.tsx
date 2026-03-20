@@ -150,6 +150,19 @@ export default function PatientFormDialog({
             </select>
           </div>
 
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Alertas del paciente
+            </label>
+            <textarea
+              value={formValues.alerts}
+              onChange={(event) => handleChange("alerts", event.target.value)}
+              rows={4}
+              placeholder={"Una alerta por linea\nEj. Hipotiroidismo\nEj. Alergia a frutos secos"}
+              className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground"
+            />
+          </div>
+
           <DialogFooter>
             <button
               type="button"

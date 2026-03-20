@@ -1,6 +1,10 @@
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { addMinutesToIsoString, combineDateAndTime } from "@/lib/utils";
-import type { Appointment, AppointmentFormValues } from "@/types/domain";
+import type {
+  Appointment,
+  AppointmentFormValues,
+  DashboardConsultation,
+} from "@/types/domain";
 
 function mapAppointment(row: any): Appointment {
   return {
@@ -91,4 +95,39 @@ export async function updateAppointment(
   }
 
   return mapAppointment(data);
+}
+
+export async function listDashboardConsultations() {
+  assertSupabaseConfigured();
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(
+      "id, patient_id, starts_at, status, patients!inner(first_name, last_name)",
+    )
+    .gte("starts_at", monthStart.toISOString())
+    .lte("starts_at", monthEnd.toISOString())
+    .order("starts_at", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data ?? []) as any[]).map(
+    (row): DashboardConsultation => {
+      const patient = Array.isArray(row.patients) ? row.patients[0] : row.patients;
+
+      return {
+        id: row.id,
+        patientId: row.patient_id,
+        patientName: `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim(),
+        startsAt: row.starts_at,
+        status: row.status,
+      };
+    },
+  );
 }

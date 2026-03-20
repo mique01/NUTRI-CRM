@@ -1,4 +1,4 @@
-import { LogOut, Users } from "lucide-react";
+import { Home, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { NavLink } from "@/components/NavLink";
@@ -13,7 +13,7 @@ const MobileNav = () => {
       await logout();
       navigate("/login");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo cerrar la sesión.");
+      toast.error(error instanceof Error ? error.message : "No se pudo cerrar la sesion.");
     }
   };
 
@@ -24,6 +24,14 @@ const MobileNav = () => {
         <NavLink
           to="/"
           end
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+          activeClassName="bg-sidebar-accent"
+        >
+          <Home className="h-3.5 w-3.5" />
+          Inicio
+        </NavLink>
+        <NavLink
+          to="/patients"
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
           activeClassName="bg-sidebar-accent"
         >

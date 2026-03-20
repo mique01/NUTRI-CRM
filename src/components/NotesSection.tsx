@@ -1,4 +1,4 @@
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { formatDate } from "@/lib/utils";
 import type { PatientNote } from "@/types/domain";
@@ -6,12 +6,14 @@ import type { PatientNote } from "@/types/domain";
 interface NotesSectionProps {
   notes: PatientNote[];
   onCreateNote: (content: string) => Promise<void>;
+  onDeleteNote?: (noteId: string) => Promise<void>;
   isSaving?: boolean;
 }
 
 const NotesSection = ({
   notes,
   onCreateNote,
+  onDeleteNote,
   isSaving = false,
 }: NotesSectionProps) => {
   const [newNote, setNewNote] = useState("");
@@ -62,9 +64,20 @@ const NotesSection = ({
               key={note.id}
               className="rounded-xl border border-border/50 bg-secondary/60 p-4"
             >
-              <p className="mb-2 text-sm leading-relaxed text-card-foreground">
-                {note.content}
-              </p>
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <p className="text-sm leading-relaxed text-card-foreground">
+                  {note.content}
+                </p>
+                {onDeleteNote ? (
+                  <button
+                    type="button"
+                    onClick={() => void onDeleteNote(note.id)}
+                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
               <span className="font-mono-app text-xs text-muted-foreground">
                 {formatDate(note.createdAt)}
               </span>

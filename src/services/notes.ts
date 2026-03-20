@@ -53,3 +53,13 @@ export async function createPatientNote(
 
   return mapPatientNote(data);
 }
+
+export async function deletePatientNote(noteId: string) {
+  assertSupabaseConfigured();
+
+  const { error } = await supabase.from("patient_notes").delete().eq("id", noteId);
+
+  if (error) {
+    throw error;
+  }
+}

@@ -93,12 +93,16 @@ create table if not exists public.patients (
   profession text,
   email text,
   phone text,
+  alerts text not null default '',
   status public.patient_status not null default 'active',
   created_by uuid references public.profiles(id) on delete set null,
   updated_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table if exists public.patients
+  add column if not exists alerts text not null default '';
 
 create table if not exists public.patient_clinical_histories (
   patient_id uuid primary key references public.patients(id) on delete cascade,

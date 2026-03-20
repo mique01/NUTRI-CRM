@@ -14,6 +14,28 @@ function getNextAppointment(appointments: Array<{ starts_at: string; status: str
     )[0]?.starts_at ?? null;
 }
 
+function getLastAppointment(appointments: Array<{ starts_at: string; status: string }> = []) {
+  return appointments
+    .filter((appointment) => appointment.status !== "cancelled")
+    .sort(
+      (left, right) =>
+        new Date(right.starts_at).getTime() - new Date(left.starts_at).getTime(),
+    )[0]?.starts_at ?? null;
+}
+
+function normalizeAlerts(value?: string | string[] | null) {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  return (value ?? "")
+    .split("\n")
+    .map((entry) => entry.replace(/^[•*-]\s*/, "").trim())
+    .filter(Boolean);
+}
+
 function mapPatient(row: any): Patient {
   return {
     id: row.id,
@@ -28,7 +50,9 @@ function mapPatient(row: any): Patient {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    alerts: normalizeAlerts(row.alerts),
     nextAppointmentAt: row.nextAppointmentAt ?? getNextAppointment(row.appointments),
+    lastAppointmentAt: row.lastAppointmentAt ?? getLastAppointment(row.appointments),
   };
 }
 
@@ -40,6 +64,7 @@ function normalizePatientPayload(values: PatientFormValues) {
     profession: values.profession.trim() || null,
     email: values.email.trim().toLowerCase() || null,
     phone: values.phone.trim() || null,
+    alerts: normalizeAlerts(values.alerts).join("\n") || "",
     status: values.status,
   };
 }
@@ -50,7 +75,7 @@ export async function listPatients() {
   const { data, error } = await supabase
     .from("patients")
     .select(
-      "id, clinic_id, first_name, last_name, birth_date, profession, email, phone, status, created_at, updated_at, appointments(starts_at, status)",
+      "id, clinic_id, first_name, last_name, birth_date, profession, email, phone, alerts, status, created_at, updated_at, appointments(starts_at, status)",
     )
     .order("created_at", { ascending: false });
 
@@ -66,7 +91,7 @@ export async function getPatientById(patientId: string) {
 
   const { data, error } = await supabase
     .from("patients")
-    .select("id, clinic_id, first_name, last_name, birth_date, profession, email, phone, status, created_at, updated_at")
+    .select("id, clinic_id, first_name, last_name, birth_date, profession, email, phone, alerts, status, created_at, updated_at, appointments(starts_at, status)")
     .eq("id", patientId)
     .maybeSingle();
 
@@ -74,7 +99,7 @@ export async function getPatientById(patientId: string) {
     throw error;
   }
 
-  return data ? mapPatient({ ...data, appointments: [] }) : null;
+  return data ? mapPatient(data) : null;
 }
 
 export async function createPatient(
@@ -94,7 +119,7 @@ export async function createPatient(
   const { data, error } = await supabase
     .from("patients")
     .insert(payload)
-    .select("id, clinic_id, first_name, last_name, birth_date, profession, email, phone, status, created_at, updated_at")
+    .select("id, clinic_id, first_name, last_name, birth_date, profession, email, phone, alerts, status, created_at, updated_at")
     .single();
 
   if (error) {
@@ -118,7 +143,7 @@ export async function updatePatient(
       updated_by: profileId,
     })
     .eq("id", patientId)
-    .select("id, clinic_id, first_name, last_name, birth_date, profession, email, phone, status, created_at, updated_at")
+    .select("id, clinic_id, first_name, last_name, birth_date, profession, email, phone, alerts, status, created_at, updated_at")
     .single();
 
   if (error) {
@@ -126,4 +151,14 @@ export async function updatePatient(
   }
 
   return mapPatient({ ...data, appointments: [] });
+}
+
+export async function deletePatient(patientId: string) {
+  assertSupabaseConfigured();
+
+  const { error } = await supabase.from("patients").delete().eq("id", patientId);
+
+  if (error) {
+    throw error;
+  }
 }

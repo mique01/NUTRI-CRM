@@ -1,5 +1,5 @@
 import { useRef, type ChangeEvent } from "react";
-import { FileText, Folder, Image, Upload } from "lucide-react";
+import { FileText, Folder, Image, Trash2, Upload } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 export interface FileListItem {
@@ -18,6 +18,7 @@ interface FileListProps {
   isUploading?: boolean;
   onUpload: (file: File) => Promise<void>;
   onDownload: (itemId: string) => Promise<void>;
+  onDelete?: (itemId: string) => Promise<void>;
 }
 
 const FileList = ({
@@ -29,6 +30,7 @@ const FileList = ({
   isUploading = false,
   onUpload,
   onDownload,
+  onDelete,
 }: FileListProps) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -65,16 +67,30 @@ const FileList = ({
           {items.map((item) => (
             <li
               key={item.id}
-              onClick={() => onDownload(item.id)}
-              className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-secondary"
+              className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-secondary"
             >
-              {getIcon(item.fileType)}
-              <span className="flex-1 truncate text-card-foreground group-hover:text-foreground">
-                {item.title}
-              </span>
-              <span className="font-mono-app text-xs text-muted-foreground">
-                {formatDate(item.date)}
-              </span>
+              <button
+                type="button"
+                onClick={() => void onDownload(item.id)}
+                className="flex flex-1 items-center gap-3 text-left"
+              >
+                {getIcon(item.fileType)}
+                <span className="flex-1 truncate text-card-foreground group-hover:text-foreground">
+                  {item.title}
+                </span>
+                <span className="font-mono-app text-xs text-muted-foreground">
+                  {formatDate(item.date)}
+                </span>
+              </button>
+              {onDelete ? (
+                <button
+                  type="button"
+                  onClick={() => void onDelete(item.id)}
+                  className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>

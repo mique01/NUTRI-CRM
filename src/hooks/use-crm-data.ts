@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import { listPatientAppointments } from "@/services/appointments";
+import { listDashboardConsultations, listPatientAppointments } from "@/services/appointments";
 import { getClinicalHistory } from "@/services/clinicalHistory";
 import { listMedicalStudies, listNutritionPlans } from "@/services/files";
 import { getPatientById, listPatients } from "@/services/patients";
@@ -10,6 +10,13 @@ export function usePatientsQuery() {
   return useQuery({
     queryKey: queryKeys.patients,
     queryFn: listPatients,
+  });
+}
+
+export function useDashboardConsultationsQuery() {
+  return useQuery({
+    queryKey: queryKeys.dashboardConsultations,
+    queryFn: listDashboardConsultations,
   });
 }
 

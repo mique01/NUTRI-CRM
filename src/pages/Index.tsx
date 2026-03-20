@@ -1,142 +1,193 @@
-import { useDeferredValue, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search } from "lucide-react";
-import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
-import PatientCard from "@/components/PatientCard";
-import PatientCardSkeleton from "@/components/PatientCardSkeleton";
-import PatientFormDialog from "@/components/PatientFormDialog";
-import { useAuth } from "@/context/AuthContext";
-import { usePatientsQuery } from "@/hooks/use-crm-data";
-import { queryKeys } from "@/lib/queryKeys";
-import { createPatient } from "@/services/patients";
-import type { PatientFormValues } from "@/types/domain";
+import { useDashboardConsultationsQuery } from "@/hooks/use-crm-data";
+import { cn, formatDate } from "@/lib/utils";
 
-const Dashboard = () => {
-  const { clinic, membership, user } = useAuth();
-  const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
-  const deferredSearch = useDeferredValue(search);
-  const patientsQuery = usePatientsQuery();
+function getCalendarDays(referenceDate: Date) {
+  const monthStart = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+  const monthEnd = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
+  const startDay = (monthStart.getDay() + 6) % 7;
+  const daysInMonth = monthEnd.getDate();
+  const previousMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 0);
+  const days = [];
 
-  const createPatientMutation = useMutation({
-    mutationFn: (values: PatientFormValues) =>
-      createPatient(clinic!.id, user!.id, values),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patients });
-      setPatientDialogOpen(false);
-      toast.success("Paciente creado correctamente.");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "No se pudo crear el paciente.",
-      );
-    },
+  for (let index = startDay - 1; index >= 0; index -= 1) {
+    days.push({
+      date: new Date(previousMonth.getFullYear(), previousMonth.getMonth(), previousMonth.getDate() - index),
+      isCurrentMonth: false,
+    });
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    days.push({
+      date: new Date(referenceDate.getFullYear(), referenceDate.getMonth(), day),
+      isCurrentMonth: true,
+    });
+  }
+
+  while (days.length % 7 !== 0) {
+    const nextDay = days.length - (startDay + daysInMonth) + 1;
+    days.push({
+      date: new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, nextDay),
+      isCurrentMonth: false,
+    });
+  }
+
+  return days;
+}
+
+function isSameDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+const weekDayLabels = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"];
+
+const Home = () => {
+  const consultationsQuery = useDashboardConsultationsQuery();
+  const today = new Date();
+  const monthLabel = new Intl.DateTimeFormat("es-AR", {
+    month: "long",
+    year: "numeric",
+  }).format(today);
+
+  const calendarDays = getCalendarDays(today);
+  const consultations = consultationsQuery.data ?? [];
+  const weekStart = new Date(today);
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
+
+  const consultationsThisWeek = consultations.filter((consultation) => {
+    const date = new Date(consultation.startsAt);
+    return date >= weekStart && date < weekEnd;
   });
 
-  const filteredPatients = useMemo(() => {
-    const patients = patientsQuery.data ?? [];
-    if (!deferredSearch.trim()) return patients;
-
-    const query = deferredSearch.toLowerCase();
-    return patients.filter((patient) =>
-      `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(query),
-    );
-  }, [deferredSearch, patientsQuery.data]);
-
-  const patients = patientsQuery.data ?? [];
-  const activePatients = patients.filter((patient) => patient.status === "active");
+  const consultationDays = new Set(
+    consultations.map((consultation) => new Date(consultation.startsAt).toDateString()),
+  );
 
   return (
     <AppLayout>
-      <div className="max-w-6xl px-4 py-6 md:px-8 md:py-8">
-        <div className="mb-6 md:mb-8">
-          <h2 className="mb-1 text-2xl font-bold text-foreground">Pacientes</h2>
-          <p className="text-sm text-muted-foreground">
-            {patients.length} pacientes · {activePatients.length} activos
+      <div className="max-w-7xl px-4 py-6 md:px-8 md:py-8">
+        <div className="mb-8">
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            Inicio
           </p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
+            Panorama del consultorio
+          </h2>
         </div>
 
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar pacientes..."
-              className="w-full rounded-xl border border-border bg-card py-2.5 pl-10 pr-4 text-sm text-foreground transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
-            />
-          </div>
-          <button
-            onClick={() => setPatientDialogOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
-          >
-            <Plus className="h-4 w-4" />
-            Nuevo paciente
-          </button>
-        </div>
-
-        {membership?.role === "admin" ? (
-          <div className="mb-6">
-            <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
-              <h3 className="font-semibold text-card-foreground">
-                Accesos administrados desde Supabase
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Invitá nuevas nutricionistas desde Supabase con el mismo email que
-                luego usarán para entrar con Google. Solo los emails previamente
-                autorizados pueden acceder al CRM.
-              </p>
-            </section>
-          </div>
-        ) : null}
-
-        {patientsQuery.isLoading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <PatientCardSkeleton key={index} />
-            ))}
-          </div>
-        ) : patientsQuery.isError ? (
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
-            {patientsQuery.error instanceof Error
-              ? patientsQuery.error.message
-              : "No se pudieron cargar los pacientes."}
-          </div>
-        ) : filteredPatients.length === 0 ? (
-          <div className="py-16 text-center text-muted-foreground">
-            <Search className="mx-auto mb-3 h-10 w-10 opacity-30" />
-            <p className="text-sm font-medium">No se encontraron pacientes</p>
-            <p className="mt-1 text-xs">Probá con otro término de búsqueda</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredPatients.map((patient, index) => (
-              <div
-                key={patient.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${index * 60}ms` }}
-              >
-                <PatientCard patient={patient} />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.95fr)_320px]">
+          <section className="rounded-[30px] border border-border bg-card p-5 shadow-card md:p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-semibold capitalize text-card-foreground">
+                  {monthLabel}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Vista compacta del mes. Mas adelante esta tarjeta se reemplaza por Google Calendar.
+                </p>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
 
-        <PatientFormDialog
-          open={patientDialogOpen}
-          onOpenChange={setPatientDialogOpen}
-          title="Nuevo paciente"
-          description="Cargá los datos generales para empezar a trabajar su ficha clínica."
-          submitLabel="Crear paciente"
-          isSubmitting={createPatientMutation.isPending}
-          onSubmit={createPatientMutation.mutateAsync}
-        />
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              {weekDayLabels.map((label) => (
+                <span key={label} className="py-2">
+                  {label}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-2 grid grid-cols-7 gap-2">
+              {calendarDays.map(({ date, isCurrentMonth }) => {
+                const hasConsultation = consultationDays.has(date.toDateString());
+                const isToday = isSameDay(date, today);
+
+                return (
+                  <div
+                    key={date.toISOString()}
+                    className={cn(
+                      "flex aspect-square min-h-[58px] flex-col items-center justify-center rounded-2xl border text-sm transition-colors",
+                      isCurrentMonth
+                        ? "border-border bg-background text-foreground"
+                        : "border-border/50 bg-muted/30 text-muted-foreground",
+                      isToday && "border-primary/40 bg-primary/10",
+                    )}
+                  >
+                    <span className="font-medium">{date.getDate()}</span>
+                    <span
+                      className={cn(
+                        "mt-2 inline-block h-2.5 w-2.5 rounded-full",
+                        hasConsultation ? "bg-primary" : "bg-transparent",
+                      )}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rounded-[30px] border border-border bg-card p-5 shadow-card md:p-6">
+            <h3 className="text-2xl font-semibold text-card-foreground">
+              Consultas esta semana
+            </h3>
+
+            <div className="mt-5 space-y-4">
+              {consultationsQuery.isLoading ? (
+                <p className="text-sm text-muted-foreground">Cargando consultas...</p>
+              ) : consultationsThisWeek.length === 0 ? (
+                <div className="rounded-2xl bg-muted px-4 py-5 text-sm text-muted-foreground">
+                  No hay consultas registradas esta semana.
+                </div>
+              ) : (
+                consultationsThisWeek.map((consultation) => (
+                  <div
+                    key={consultation.id}
+                    className="rounded-[24px] border border-border bg-background p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-card-foreground">
+                          {consultation.patientName}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDate(consultation.startsAt, {
+                            weekday: "long",
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          "mt-1 inline-block h-2.5 w-2.5 rounded-full",
+                          consultation.status === "completed"
+                            ? "bg-success"
+                            : consultation.status === "scheduled"
+                              ? "bg-primary"
+                              : "bg-muted-foreground/40",
+                        )}
+                      />
+                    </div>
+                    <div className="mt-4 rounded-2xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+                      Estado: {consultation.status}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
       </div>
     </AppLayout>
   );
 };
 
-export default Dashboard;
+export default Home;

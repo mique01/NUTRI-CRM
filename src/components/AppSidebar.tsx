@@ -1,4 +1,4 @@
-import { LogOut, Users } from "lucide-react";
+import { Home, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { NavLink } from "@/components/NavLink";
@@ -13,18 +13,18 @@ const AppSidebar = () => {
       await logout();
       navigate("/login");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo cerrar la sesión.");
+      toast.error(error instanceof Error ? error.message : "No se pudo cerrar la sesion.");
     }
   };
 
   return (
-    <aside className="hidden min-h-screen w-56 flex-col border-r border-sidebar-border bg-sidebar px-3 py-6 md:flex">
-      <div className="mb-8 px-3">
+    <aside className="hidden min-h-screen w-60 flex-col border-r border-sidebar-border bg-sidebar px-4 py-6 md:flex">
+      <div className="mb-8 px-2">
         <h1 className="text-lg font-bold tracking-tight text-sidebar-foreground">
           NutriCRM
         </h1>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {clinic?.name ?? "Gestión de pacientes"}
+          {clinic?.name ?? "Gestion de pacientes"}
         </p>
       </div>
 
@@ -32,7 +32,15 @@ const AppSidebar = () => {
         <NavLink
           to="/"
           end
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+          className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+        >
+          <Home className="h-4 w-4" />
+          Inicio
+        </NavLink>
+        <NavLink
+          to="/patients"
+          className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
           activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
         >
           <Users className="h-4 w-4" />
@@ -41,7 +49,7 @@ const AppSidebar = () => {
       </nav>
 
       {user ? (
-        <div className="mt-auto border-t border-sidebar-border px-3 pt-4">
+        <div className="mt-auto border-t border-sidebar-border px-2 pt-4">
           <p className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</p>
           <p className="mb-3 truncate text-xs text-muted-foreground">{user.email}</p>
           <button
@@ -49,7 +57,7 @@ const AppSidebar = () => {
             className="flex w-full items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             <LogOut className="h-3.5 w-3.5" />
-            Cerrar sesión
+            Cerrar sesion
           </button>
         </div>
       ) : null}
