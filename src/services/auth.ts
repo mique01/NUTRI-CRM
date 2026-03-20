@@ -3,8 +3,6 @@ import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { getDisplayName } from "@/lib/utils";
 import type { AuthUser } from "@/types/domain";
 
-export const PENDING_INVITE_STORAGE_KEY = "nutricrm.pendingInviteToken";
-
 function mapUser(user: User): AuthUser {
   const fullName =
     user.user_metadata?.full_name ??
@@ -20,17 +18,10 @@ function mapUser(user: User): AuthUser {
   };
 }
 
-export async function signInWithGoogle(inviteToken?: string | null) {
+export async function signInWithGoogle() {
   assertSupabaseConfigured();
 
-  if (inviteToken) {
-    window.localStorage.setItem(PENDING_INVITE_STORAGE_KEY, inviteToken);
-  }
-
   const redirectUrl = new URL("/auth/callback", window.location.origin);
-  if (inviteToken) {
-    redirectUrl.searchParams.set("invite", inviteToken);
-  }
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -85,22 +76,6 @@ export async function syncCurrentProfile(user: User) {
   if (error) {
     throw error;
   }
-}
-
-export function getPendingInviteToken() {
-  return window.localStorage.getItem(PENDING_INVITE_STORAGE_KEY);
-}
-
-export function setPendingInviteToken(inviteToken: string) {
-  window.localStorage.setItem(PENDING_INVITE_STORAGE_KEY, inviteToken);
-}
-
-export function consumePendingInviteToken() {
-  const value = getPendingInviteToken();
-  if (value) {
-    window.localStorage.removeItem(PENDING_INVITE_STORAGE_KEY);
-  }
-  return value;
 }
 
 export function mapAuthUser(user: User | null) {

@@ -4,6 +4,7 @@ export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no_sh
 export type StudyFileType = "pdf" | "image";
 export type ExternalProvider = "google_calendar" | null;
 export type SyncState = "not_connected" | "local_only" | "synced" | "sync_error";
+export type AuthAccessStatus = "member" | "pending_bootstrap" | "denied";
 
 export interface AuthUser {
   id: string;
@@ -24,6 +25,13 @@ export interface ClinicMembership {
   profileId: string;
   role: ClinicMembershipRole;
   clinic: Clinic;
+}
+
+export interface AccessState {
+  status: AuthAccessStatus;
+  clinicId: string | null;
+  clinicName: string | null;
+  invitedEmail: string | null;
 }
 
 export interface Patient {

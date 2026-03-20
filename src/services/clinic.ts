@@ -1,5 +1,5 @@
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
-import type { ClinicMembership, InviteRecord } from "@/types/domain";
+import type { AccessState, ClinicMembership, InviteRecord } from "@/types/domain";
 
 function mapMembership(row: any): ClinicMembership {
   return {
@@ -45,6 +45,26 @@ export async function getCurrentClinicMembership(profileId: string) {
   return data ? mapMembership(data) : null;
 }
 
+export async function getMyAccessState() {
+  assertSupabaseConfigured();
+
+  const { data, error } = await supabase.rpc("get_my_access_state");
+
+  if (error) {
+    throw error;
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  const accessState: AccessState = {
+    status: row?.access_status ?? "denied",
+    clinicId: row?.clinic_id ?? null,
+    clinicName: row?.clinic_name ?? null,
+    invitedEmail: row?.invited_email ?? null,
+  };
+
+  return accessState;
+}
+
 export async function bootstrapClinic(clinicName: string) {
   assertSupabaseConfigured();
 
@@ -83,6 +103,18 @@ export async function acceptClinicInvite(inviteToken: string) {
   const { data, error } = await supabase.rpc("accept_clinic_invite", {
     invite_token: inviteToken,
   });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function acceptMyClinicInvite() {
+  assertSupabaseConfigured();
+
+  const { data, error } = await supabase.rpc("accept_my_clinic_invite");
 
   if (error) {
     throw error;

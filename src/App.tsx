@@ -38,7 +38,7 @@ const FullscreenMessage = ({
 );
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { user, clinic, loading, isConfigured } = useAuth();
+  const { user, clinic, accessStatus, loading, isConfigured } = useAuth();
 
   if (loading) {
     return (
@@ -59,12 +59,13 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (!clinic) return <Navigate to="/setup" replace />;
+  if (accessStatus === "pending_bootstrap") return <Navigate to="/setup" replace />;
+  if (!clinic || accessStatus === "denied") return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 const GuestRoute = ({ children }: { children: ReactNode }) => {
-  const { user, clinic, loading } = useAuth();
+  const { user, clinic, accessStatus, loading } = useAuth();
 
   if (loading) {
     return (
@@ -75,13 +76,13 @@ const GuestRoute = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (user && clinic) return <Navigate to="/" replace />;
-  if (user && !clinic) return <Navigate to="/setup" replace />;
+  if (user && clinic && accessStatus === "member") return <Navigate to="/" replace />;
+  if (user && accessStatus === "pending_bootstrap") return <Navigate to="/setup" replace />;
   return <>{children}</>;
 };
 
 const SetupRoute = () => {
-  const { user, clinic, loading } = useAuth();
+  const { user, clinic, accessStatus, loading } = useAuth();
 
   if (loading) {
     return (
@@ -93,7 +94,8 @@ const SetupRoute = () => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (clinic) return <Navigate to="/" replace />;
+  if (clinic && accessStatus === "member") return <Navigate to="/" replace />;
+  if (accessStatus === "denied") return <Navigate to="/login" replace />;
   return <Setup />;
 };
 

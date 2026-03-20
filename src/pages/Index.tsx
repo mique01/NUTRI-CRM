@@ -3,14 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
-import InviteTeammateCard from "@/components/InviteTeammateCard";
 import PatientCard from "@/components/PatientCard";
 import PatientCardSkeleton from "@/components/PatientCardSkeleton";
 import PatientFormDialog from "@/components/PatientFormDialog";
 import { useAuth } from "@/context/AuthContext";
 import { usePatientsQuery } from "@/hooks/use-crm-data";
 import { queryKeys } from "@/lib/queryKeys";
-import { createClinicInvite } from "@/services/clinic";
 import { createPatient } from "@/services/patients";
 import type { PatientFormValues } from "@/types/domain";
 
@@ -33,15 +31,6 @@ const Dashboard = () => {
     onError: (error) => {
       toast.error(
         error instanceof Error ? error.message : "No se pudo crear el paciente.",
-      );
-    },
-  });
-
-  const inviteMutation = useMutation({
-    mutationFn: createClinicInvite,
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "No se pudo generar la invitación.",
       );
     },
   });
@@ -91,7 +80,16 @@ const Dashboard = () => {
 
         {membership?.role === "admin" ? (
           <div className="mb-6">
-            <InviteTeammateCard onCreateInvite={inviteMutation.mutateAsync} />
+            <section className="rounded-2xl border border-border bg-card p-6 shadow-card">
+              <h3 className="font-semibold text-card-foreground">
+                Accesos administrados desde Supabase
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Invitá nuevas nutricionistas desde Supabase con el mismo email que
+                luego usarán para entrar con Google. Solo los emails previamente
+                autorizados pueden acceder al CRM.
+              </p>
+            </section>
           </div>
         ) : null}
 

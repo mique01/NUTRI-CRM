@@ -10,17 +10,23 @@ import {
 import type { Session } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { mapAuthUser, signInWithGoogle, signOut, syncCurrentProfile } from "@/services/auth";
-import { getCurrentClinicMembership } from "@/services/clinic";
-import type { AuthUser, Clinic, ClinicMembership } from "@/types/domain";
+import {
+  acceptMyClinicInvite,
+  getCurrentClinicMembership,
+  getMyAccessState,
+} from "@/services/clinic";
+import type { AccessState, AuthAccessStatus, AuthUser, Clinic, ClinicMembership } from "@/types/domain";
 
 interface AuthContextType {
   session: Session | null;
   user: AuthUser | null;
   clinic: Clinic | null;
   membership: ClinicMembership | null;
+  accessStatus: AuthAccessStatus;
+  accessState: AccessState | null;
   loading: boolean;
   isConfigured: boolean;
-  loginWithGoogle: (inviteToken?: string | null) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   refreshContext: () => Promise<void>;
 }
@@ -36,17 +42,59 @@ async function loadAuthContext(session: Session | null) {
       user: null,
       clinic: null,
       membership: null,
+      accessStatus: "denied" as const,
+      accessState: null,
     };
   }
 
   await syncCurrentProfile(session.user);
-  const membership = await getCurrentClinicMembership(session.user.id);
+  let membership = await getCurrentClinicMembership(session.user.id);
+
+  if (membership) {
+    return {
+      session,
+      user: mapAuthUser(session.user),
+      clinic: membership.clinic ?? null,
+      membership,
+      accessStatus: "member" as const,
+      accessState: {
+        status: "member",
+        clinicId: membership.clinicId,
+        clinicName: membership.clinic.name,
+        invitedEmail: session.user.email?.toLowerCase() ?? null,
+      },
+    };
+  }
+
+  const accessState = await getMyAccessState();
+
+  if (accessState.status === "member") {
+    membership = await getCurrentClinicMembership(session.user.id);
+  }
+
+  if (accessState.status !== "pending_bootstrap" && accessState.invitedEmail) {
+    await acceptMyClinicInvite();
+    membership = await getCurrentClinicMembership(session.user.id);
+  }
 
   return {
     session,
     user: mapAuthUser(session.user),
     clinic: membership?.clinic ?? null,
     membership,
+    accessStatus:
+      membership?.clinic != null
+        ? ("member" as const)
+        : accessState.status,
+    accessState:
+      membership?.clinic != null
+        ? {
+            status: "member",
+            clinicId: membership.clinicId,
+            clinicName: membership.clinic.name,
+            invitedEmail: session.user.email?.toLowerCase() ?? null,
+          }
+        : accessState,
   };
 }
 
@@ -55,6 +103,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [membership, setMembership] = useState<ClinicMembership | null>(null);
+  const [accessStatus, setAccessStatus] = useState<AuthAccessStatus>("denied");
+  const [accessState, setAccessState] = useState<AccessState | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refreshContext = async () => {
@@ -64,6 +114,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setClinic(null);
       setMembership(null);
+      setAccessStatus("denied");
+      setAccessState(null);
       return;
     }
 
@@ -77,6 +129,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(nextState.user);
     setClinic(nextState.clinic);
     setMembership(nextState.membership);
+    setAccessStatus(nextState.accessStatus);
+    setAccessState(nextState.accessState);
     setLoading(false);
   };
 
@@ -98,6 +152,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(nextState.user);
             setClinic(nextState.clinic);
             setMembership(nextState.membership);
+            setAccessStatus(nextState.accessStatus);
+            setAccessState(nextState.accessState);
           })
           .finally(() => setLoading(false));
       });
@@ -114,13 +170,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user,
       clinic,
       membership,
+      accessStatus,
+      accessState,
       loading,
       isConfigured: isSupabaseConfigured,
       loginWithGoogle: signInWithGoogle,
       logout: signOut,
       refreshContext,
     }),
-    [session, user, clinic, membership, loading],
+    [session, user, clinic, membership, accessStatus, accessState, loading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
