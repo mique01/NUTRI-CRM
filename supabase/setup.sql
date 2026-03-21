@@ -695,6 +695,69 @@ begin
 end;
 $$;
 
+create or replace function public.try_accept_supabase_auth_invite()
+returns public.clinic_memberships
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  current_profile uuid;
+  current_membership public.clinic_memberships;
+  primary_clinic_id uuid;
+  was_supabase_invited boolean;
+  resulting_membership public.clinic_memberships;
+begin
+  if auth.uid() is null then
+    raise exception 'Debes iniciar sesion.';
+  end if;
+
+  current_profile := public.ensure_current_profile();
+
+  select *
+  into current_membership
+  from public.clinic_memberships
+  where profile_id = current_profile
+  order by created_at asc
+  limit 1;
+
+  if current_membership is not null then
+    return current_membership;
+  end if;
+
+  select exists (
+    select 1
+    from auth.users
+    where id = auth.uid()
+      and invited_at is not null
+      and deleted_at is null
+  )
+  into was_supabase_invited;
+
+  if not was_supabase_invited then
+    return null;
+  end if;
+
+  select id
+  into primary_clinic_id
+  from public.clinics
+  order by created_at asc
+  limit 1;
+
+  if primary_clinic_id is null then
+    return null;
+  end if;
+
+  insert into public.clinic_memberships (clinic_id, profile_id, role)
+  values (primary_clinic_id, current_profile, 'nutritionist')
+  on conflict (clinic_id, profile_id) do update
+  set updated_at = timezone('utc', now())
+  returning * into resulting_membership;
+
+  return resulting_membership;
+end;
+$$;
+
 alter table public.profiles enable row level security;
 alter table public.clinics enable row level security;
 alter table public.clinic_memberships enable row level security;

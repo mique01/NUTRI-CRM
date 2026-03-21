@@ -122,3 +122,15 @@ export async function acceptMyClinicInvite() {
 
   return data;
 }
+
+export async function tryAcceptSupabaseAuthInvite() {
+  assertSupabaseConfigured();
+
+  const { data, error } = await supabase.rpc("try_accept_supabase_auth_invite");
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? mapMembership(data) : null;
+}

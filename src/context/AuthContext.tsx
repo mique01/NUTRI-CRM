@@ -21,6 +21,7 @@ import {
   acceptMyClinicInvite,
   getCurrentClinicMembership,
   getMyAccessState,
+  tryAcceptSupabaseAuthInvite,
 } from "@/services/clinic";
 import type { AccessState, AuthAccessStatus, AuthUser, Clinic, ClinicMembership } from "@/types/domain";
 
@@ -58,6 +59,28 @@ async function loadAuthContext(session: Session | null) {
 
   await syncCurrentProfile(session.user);
   let membership = await getCurrentClinicMembership(session.user.id);
+
+  if (membership) {
+    return {
+      session,
+      user: mapAuthUser(session.user),
+      clinic: membership.clinic ?? null,
+      membership,
+      accessStatus: "member" as const,
+      accessState: {
+        status: "member",
+        clinicId: membership.clinicId,
+        clinicName: membership.clinic.name,
+        invitedEmail: session.user.email?.toLowerCase() ?? null,
+      },
+    };
+  }
+
+  const supabaseInviteMembership = await tryAcceptSupabaseAuthInvite();
+
+  if (supabaseInviteMembership) {
+    membership = await getCurrentClinicMembership(session.user.id);
+  }
 
   if (membership) {
     return {
