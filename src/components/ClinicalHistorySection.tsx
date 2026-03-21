@@ -51,14 +51,10 @@ function normalizeListValue(value: string) {
   return value
     .split("\n")
     .map((line) => line.trim())
+    .map((line) => line.replace(/^(?:\u2022|-|\*)\s*/, "").trim())
     .filter(Boolean)
-    .map((line) => `${BULLET}${line.replace(/^(?:\u2022|-|\*)\s*/, "").trim()}`)
+    .map((line) => `${BULLET}${line}`)
     .join("\n");
-}
-
-function ensureEditingValue(value: string) {
-  if (!value.trim()) return BULLET;
-  return normalizeListValue(value);
 }
 
 function getRowCount(value: string) {
@@ -83,13 +79,6 @@ export default function ClinicalHistorySection({
     setFormValues((current) => ({ ...current, [field]: value }));
   };
 
-  const handleFocus = (field: keyof ClinicalHistoryFormValues) => {
-    const currentValue = formValues[field];
-    if (!currentValue) {
-      handleChange(field, BULLET);
-    }
-  };
-
   const handleBlur = (field: keyof ClinicalHistoryFormValues) => {
     handleChange(field, normalizeListValue(formValues[field]));
   };
@@ -105,9 +94,15 @@ export default function ClinicalHistorySection({
     const target = event.currentTarget;
     const start = target.selectionStart ?? 0;
     const end = target.selectionEnd ?? 0;
-    const preparedValue = ensureEditingValue(formValues[field]);
-    const insertValue = `\n${BULLET}`;
-    const nextValue = preparedValue.slice(0, start) + insertValue + preparedValue.slice(end);
+    const currentValue = formValues[field];
+    const normalizedCurrentValue = currentValue
+      ? currentValue.replace(/\r/g, "")
+      : "";
+    const insertValue = normalizedCurrentValue.trim() ? `\n${BULLET}` : BULLET;
+    const nextValue =
+      normalizedCurrentValue.slice(0, start) +
+      insertValue +
+      normalizedCurrentValue.slice(end);
 
     handleChange(field, nextValue);
 
@@ -152,7 +147,6 @@ export default function ClinicalHistorySection({
             <textarea
               value={formValues[field.key]}
               onChange={(event) => handleChange(field.key, event.target.value)}
-              onFocus={() => handleFocus(field.key)}
               onBlur={() => handleBlur(field.key)}
               onKeyDown={(event) => handleKeyDown(field.key, event)}
               placeholder={BULLET}

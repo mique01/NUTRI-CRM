@@ -69,18 +69,20 @@ const FileList = ({
           {items.map((item) => (
             <li
               key={item.id}
-              className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-secondary"
+              className="group flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-secondary"
             >
               <button
                 type="button"
                 onClick={() => void onDownload(item.id)}
-                className="flex flex-1 items-center gap-3 text-left"
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
               >
                 {getIcon(item.fileType)}
-                <span className="flex-1 truncate text-card-foreground group-hover:text-foreground">
-                  {item.title}
-                </span>
-                <span className="font-mono-app text-xs text-muted-foreground">
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-card-foreground group-hover:text-foreground">
+                    {item.title}
+                  </span>
+                </div>
+                <span className="shrink-0 whitespace-nowrap font-mono-app text-xs text-muted-foreground">
                   {formatDate(item.date)}
                 </span>
               </button>
@@ -88,7 +90,7 @@ const FileList = ({
                 <button
                   type="button"
                   onClick={() => void onDelete(item.id)}
-                  className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
+                  className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
