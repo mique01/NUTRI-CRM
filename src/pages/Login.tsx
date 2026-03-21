@@ -67,7 +67,17 @@ const Login = () => {
               >
                 Cerrar sesion
               </button>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                onClick={handleLogin}
+                disabled={isSubmitting || !isConfigured}
+                className="flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-card transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Chrome className="h-4 w-4" />
+                {isSubmitting ? "Redirigiendo..." : "Volver a intentar con Google"}
+              </button>
+            )}
           </div>
         ) : (
           <button

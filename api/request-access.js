@@ -50,13 +50,13 @@ export default async function handler(req, res) {
       return;
     }
 
-    let adminEmail = normalizeEmail(process.env.ACCESS_REQUEST_ADMIN_EMAIL);
+    const fallbackAdminEmail = normalizeEmail(await getProfileEmail(serviceClient, clinic.created_by));
+    const adminEmail = normalizeEmail(process.env.ACCESS_REQUEST_ADMIN_EMAIL);
+    const adminRecipients = Array.from(
+      new Set([adminEmail, fallbackAdminEmail].filter(Boolean)),
+    );
 
-    if (!adminEmail) {
-      adminEmail = normalizeEmail(await getProfileEmail(serviceClient, clinic.created_by));
-    }
-
-    if (adminEmail && normalizedEmail === adminEmail) {
+    if (adminRecipients.includes(normalizedEmail)) {
       await ensureMembership(serviceClient, {
         clinicId: clinic.id,
         profileId: user.id,
@@ -136,10 +136,10 @@ export default async function handler(req, res) {
 
     let adminWasNotified = Boolean(requestRecord.notified_at);
 
-    if (shouldSendEmail && adminEmail) {
+    if (shouldSendEmail && adminRecipients.length > 0) {
       const approvalUrl = `${getBaseUrl(req)}/api/approve-access?token=${requestRecord.approval_token}`;
       const notificationSent = await sendAdminAccessEmail({
-        to: adminEmail,
+        to: adminRecipients,
         subject: `Solicitud de acceso a NutriCRM: ${normalizedEmail}`,
         html: `
           <div style="font-family: Inter, Arial, sans-serif; line-height: 1.6; color: #1e1b18;">
@@ -182,7 +182,7 @@ export default async function handler(req, res) {
       status: existingRequest ? "already_pending" : "pending",
       message: adminWasNotified
         ? "Todavia no tenes acceso al CRM. Le enviamos tu solicitud al administrador para que la apruebe."
-        : "Todavia no tenes acceso al CRM. La solicitud quedo registrada, pero falta configurar el envio de mails al administrador.",
+        : "Todavia no tenes acceso al CRM. La solicitud quedo registrada, pero falta configurar correctamente el mail del administrador.",
     });
   } catch (error) {
     console.error("request-access failed", error);

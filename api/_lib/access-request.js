@@ -153,8 +153,9 @@ export async function ensureMembership(serviceClient, { clinicId, profileId, rol
 export async function sendAdminAccessEmail({ to, subject, html, text }) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
+  const recipients = Array.isArray(to) ? to.filter(Boolean) : [to].filter(Boolean);
 
-  if (!apiKey || !from || !to) {
+  if (!apiKey || !from || recipients.length === 0) {
     return false;
   }
 
@@ -166,7 +167,7 @@ export async function sendAdminAccessEmail({ to, subject, html, text }) {
     },
     body: JSON.stringify({
       from,
-      to,
+      to: recipients,
       subject,
       html,
       text,
