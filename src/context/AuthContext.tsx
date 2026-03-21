@@ -11,12 +11,14 @@ import type { Session } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import {
   clearDeniedAccessMessage,
+  getDefaultDeniedAccessMessage,
   mapAuthUser,
   persistDeniedAccessMessage,
   signInWithGoogle,
   signOut,
   syncCurrentProfile,
 } from "@/services/auth";
+import { submitAccessRequest } from "@/services/accessRequests";
 import {
   acceptMyClinicInvite,
   getCurrentClinicMembership,
@@ -158,7 +160,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (nextState.session?.user && nextState.accessStatus === "denied") {
-      persistDeniedAccessMessage();
+      try {
+        const requestResult = await submitAccessRequest(currentSession);
+
+        if (requestResult.status === "approved" || requestResult.status === "member") {
+          clearDeniedAccessMessage();
+          return await loadAuthContext(currentSession);
+        }
+
+        persistDeniedAccessMessage(requestResult.message);
+      } catch (error) {
+        persistDeniedAccessMessage(
+          error instanceof Error ? error.message : getDefaultDeniedAccessMessage(),
+        );
+      }
+
       await signOut();
       return emptyAuthState;
     }

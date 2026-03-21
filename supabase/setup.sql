@@ -20,6 +20,10 @@ begin
     create type public.invite_status as enum ('pending', 'accepted', 'revoked', 'expired');
   end if;
 
+  if not exists (select 1 from pg_type where typname = 'access_request_status') then
+    create type public.access_request_status as enum ('pending', 'approved', 'rejected');
+  end if;
+
   if not exists (select 1 from pg_type where typname = 'study_file_type') then
     create type public.study_file_type as enum ('pdf', 'image');
   end if;
@@ -80,6 +84,24 @@ create table if not exists public.clinic_invites (
   status public.invite_status not null default 'pending',
   expires_at timestamptz not null default (timezone('utc', now()) + interval '30 days'),
   accepted_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.access_requests (
+  id uuid primary key default gen_random_uuid(),
+  clinic_id uuid references public.clinics(id) on delete cascade,
+  profile_id uuid references public.profiles(id) on delete set null,
+  requested_by uuid references public.profiles(id) on delete set null,
+  email text not null,
+  full_name text,
+  status public.access_request_status not null default 'pending',
+  approval_token uuid not null unique default gen_random_uuid(),
+  requested_at timestamptz not null default timezone('utc', now()),
+  last_requested_at timestamptz not null default timezone('utc', now()),
+  notified_at timestamptz,
+  approved_at timestamptz,
+  approved_by_email text,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
@@ -185,6 +207,10 @@ create unique index if not exists clinic_invites_unique_pending_email
   on public.clinic_invites (clinic_id, lower(invited_email))
   where status = 'pending';
 
+create unique index if not exists access_requests_unique_pending_email
+  on public.access_requests (lower(email))
+  where status = 'pending';
+
 create index if not exists clinic_memberships_profile_id_idx on public.clinic_memberships (profile_id);
 create index if not exists patients_clinic_id_idx on public.patients (clinic_id);
 create index if not exists patient_notes_patient_id_idx on public.patient_notes (patient_id, created_at desc);
@@ -255,6 +281,10 @@ for each row execute function public.set_updated_at();
 
 drop trigger if exists set_clinic_invites_updated_at on public.clinic_invites;
 create trigger set_clinic_invites_updated_at before update on public.clinic_invites
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_access_requests_updated_at on public.access_requests;
+create trigger set_access_requests_updated_at before update on public.access_requests
 for each row execute function public.set_updated_at();
 
 drop trigger if exists set_patients_updated_at on public.patients;
@@ -765,6 +795,7 @@ alter table public.profiles enable row level security;
 alter table public.clinics enable row level security;
 alter table public.clinic_memberships enable row level security;
 alter table public.clinic_invites enable row level security;
+alter table public.access_requests enable row level security;
 alter table public.patients enable row level security;
 alter table public.patient_clinical_histories enable row level security;
 alter table public.patient_notes enable row level security;
@@ -825,6 +856,17 @@ create policy "Invites are updatable by admins"
 on public.clinic_invites for update
 using (app.is_clinic_admin(clinic_id))
 with check (app.is_clinic_admin(clinic_id));
+
+drop policy if exists "Access requests are viewable by admins" on public.access_requests;
+create policy "Access requests are viewable by admins"
+on public.access_requests for select
+using (clinic_id is not null and app.is_clinic_admin(clinic_id));
+
+drop policy if exists "Access requests are updatable by admins" on public.access_requests;
+create policy "Access requests are updatable by admins"
+on public.access_requests for update
+using (clinic_id is not null and app.is_clinic_admin(clinic_id))
+with check (clinic_id is not null and app.is_clinic_admin(clinic_id));
 
 drop policy if exists "Patients are readable by clinic members" on public.patients;
 create policy "Patients are readable by clinic members"

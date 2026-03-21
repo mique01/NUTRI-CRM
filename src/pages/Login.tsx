@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import {
   clearDeniedAccessMessage,
+  getDefaultDeniedAccessMessage,
   getDeniedAccessMessage,
 } from "@/services/auth";
 
@@ -26,12 +27,13 @@ const Login = () => {
     try {
       await loginWithGoogle();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
+      toast.error(error instanceof Error ? error.message : "No se pudo iniciar sesion.");
       setIsSubmitting(false);
     }
   };
 
   const showDeniedState = Boolean(deniedMessage) || (user && accessStatus === "denied");
+  const visibleMessage = deniedMessage ?? getDefaultDeniedAccessMessage();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -42,18 +44,19 @@ const Login = () => {
           </div>
           <h1 className="text-2xl font-bold text-foreground">Bienvenida a NutriCRM</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Iniciá sesión con Google usando un email habilitado previamente desde Supabase.
+            Inicia sesion con Google. Si tu cuenta todavia no tiene acceso, le vamos a avisar al
+            administrador para que la apruebe.
           </p>
         </div>
 
         {showDeniedState ? (
           <div className="space-y-4">
             <div className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              Lo lamento, no estás habilitado para ingresar.
+              {visibleMessage}
             </div>
 
             <p className="text-sm text-muted-foreground">
-              Solo pueden acceder los usuarios habilitados desde Supabase.
+              Cuando el administrador habilite tu cuenta, vas a poder volver a ingresar con Google.
             </p>
 
             {user ? (
@@ -62,7 +65,7 @@ const Login = () => {
                 onClick={() => void logout()}
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition-all hover:bg-accent"
               >
-                Cerrar sesión
+                Cerrar sesion
               </button>
             ) : null}
           </div>

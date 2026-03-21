@@ -4,6 +4,8 @@ import { getDisplayName } from "@/lib/utils";
 import type { AuthUser } from "@/types/domain";
 
 const ACCESS_DENIED_STORAGE_KEY = "nutricrm.accessDeniedMessage";
+const DEFAULT_DENIED_MESSAGE =
+  "Lo lamento, no estas habilitado para ingresar todavia. Ya avisamos al administrador.";
 
 function mapUser(user: User): AuthUser {
   const fullName =
@@ -84,13 +86,10 @@ export function mapAuthUser(user: User | null) {
   return user ? mapUser(user) : null;
 }
 
-export function persistDeniedAccessMessage() {
+export function persistDeniedAccessMessage(message = DEFAULT_DENIED_MESSAGE) {
   if (typeof window === "undefined") return;
 
-  window.localStorage.setItem(
-    ACCESS_DENIED_STORAGE_KEY,
-    "Lo lamento, no estás habilitado para ingresar.",
-  );
+  window.localStorage.setItem(ACCESS_DENIED_STORAGE_KEY, message);
 }
 
 export function getDeniedAccessMessage() {
@@ -103,4 +102,8 @@ export function clearDeniedAccessMessage() {
   if (typeof window === "undefined") return;
 
   window.localStorage.removeItem(ACCESS_DENIED_STORAGE_KEY);
+}
+
+export function getDefaultDeniedAccessMessage() {
+  return DEFAULT_DENIED_MESSAGE;
 }
