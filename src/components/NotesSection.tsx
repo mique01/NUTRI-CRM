@@ -29,10 +29,12 @@ const NotesSection = ({
   );
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+    <div className="rounded-[30px] border border-border/80 bg-[linear-gradient(180deg,rgba(251,248,228,0.92),rgba(243,238,211,0.94))] p-6 shadow-soft">
       <div className="mb-4 flex items-center gap-2">
-        <MessageSquare className="h-4.5 w-4.5 text-muted-foreground" />
-        <h3 className="font-semibold text-card-foreground">Notas e historial</h3>
+        <MessageSquare className="h-4.5 w-4.5 text-primary/70" />
+        <h3 className="font-display text-3xl font-semibold leading-none text-card-foreground">
+          Notas e historial
+        </h3>
       </div>
 
       <div className="mb-4">
@@ -40,13 +42,13 @@ const NotesSection = ({
           value={newNote}
           onChange={(event) => setNewNote(event.target.value)}
           placeholder="Agregar una nota..."
-          className="w-full resize-none rounded-xl border border-border bg-background p-3 text-sm text-foreground transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
+          className="crm-input min-h-[120px] resize-none p-4"
           rows={3}
         />
         <button
           onClick={handleSubmit}
           disabled={!newNote.trim() || isSaving}
-          className="mt-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+          className="mt-3 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {isSaving ? "Guardando..." : "Guardar nota"}
         </button>
@@ -62,7 +64,7 @@ const NotesSection = ({
           {sortedNotes.map((note) => (
             <div
               key={note.id}
-              className="rounded-xl border border-border/50 bg-secondary/60 p-4"
+              className="rounded-[20px] border border-border/55 bg-background/65 p-4"
             >
               <div className="mb-2 flex items-start justify-between gap-3">
                 <p className="text-sm leading-relaxed text-card-foreground">
@@ -72,7 +74,7 @@ const NotesSection = ({
                   <button
                     type="button"
                     onClick={() => void onDeleteNote(note.id)}
-                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
+                    className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-card hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

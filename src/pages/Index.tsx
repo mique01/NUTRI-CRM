@@ -218,7 +218,7 @@ const Home = () => {
               <p className="text-sm font-medium uppercase tracking-[0.28em] text-primary/70">
                 Inicio
               </p>
-              <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+              <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
                 Panel de Control
               </h1>
               <p className="mt-2 text-sm uppercase tracking-[0.22em] text-muted-foreground">
@@ -244,10 +244,12 @@ const Home = () => {
           <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
             <section className="rounded-[34px] border border-[#6d755f]/60 bg-[linear-gradient(180deg,rgba(250,247,221,0.9),rgba(244,240,214,0.95))] p-5 shadow-[0_16px_36px_rgba(91,88,66,0.12)] md:p-6">
               <div className="mb-6 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="font-serif text-2xl font-semibold tracking-tight text-foreground md:text-[2rem]">
-                    <span>{monthLabel}</span>{" "}
-                    <span className="italic text-primary/80">{yearLabel}</span>
+                <div className="text-center sm:text-left">
+                  <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-foreground md:text-[2rem]">
+                    <span className="block text-[0.95em] text-primary/82">{yearLabel}</span>
+                    <span className="block text-[0.85em] uppercase tracking-[0.12em] text-[#a85f1d]">
+                      {monthLabel}
+                    </span>
                   </h2>
                   <p className="mt-2 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
                     Calendario del consultorio
@@ -336,7 +338,7 @@ const Home = () => {
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/70">
                     Agenda del dia
                   </p>
-                  <h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-foreground">
+                  <h2 className="mt-2 font-display text-4xl font-semibold tracking-tight text-foreground">
                     {selectedDayLabel}
                   </h2>
                 </div>
@@ -380,7 +382,7 @@ const Home = () => {
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <p className="truncate font-serif text-2xl font-semibold text-foreground">
+                                  <p className="truncate font-display text-3xl font-semibold text-foreground">
                                     {consultation.patientName}
                                   </p>
                                   <p className="mt-2 text-sm italic text-muted-foreground">
@@ -410,7 +412,7 @@ const Home = () => {
             <section className="xl:col-span-2 rounded-[30px] border border-[#6d755f]/55 bg-[linear-gradient(180deg,rgba(250,247,221,0.82),rgba(245,241,214,0.92))] p-5 shadow-[0_14px_30px_rgba(91,88,66,0.12)] md:p-6">
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 className="font-serif text-3xl font-semibold tracking-tight text-foreground">
+                  <h2 className="font-display text-4xl font-semibold tracking-tight text-foreground">
                     Consultas de la semana
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
@@ -457,7 +459,7 @@ const Home = () => {
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className="truncate font-serif text-2xl font-semibold leading-none text-foreground">
+                          <p className="truncate font-display text-3xl font-semibold leading-none text-foreground">
                             {consultation.patientName}
                           </p>
                           <p className="mt-2 text-sm text-muted-foreground">

@@ -8,10 +8,12 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   return (
-    <div className="min-h-screen flex flex-col md:flex-row w-full">
+    <div className="min-h-screen w-full bg-background md:flex">
       <AppSidebar />
       <MobileNav />
-      <main className="flex-1 min-w-0">{children}</main>
+      <main className="min-w-0 flex-1 border-t border-border/70 md:border-l md:border-t-0">
+        {children}
+      </main>
     </div>
   );
 };

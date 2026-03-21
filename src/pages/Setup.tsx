@@ -31,12 +31,14 @@ const Setup = () => {
   return (
     <div className="min-h-screen bg-background px-4 py-10">
       <div className="mx-auto max-w-3xl">
-        <section className="rounded-3xl border border-border bg-card p-8 shadow-card">
+        <section className="rounded-[34px] border border-border/80 bg-[linear-gradient(180deg,rgba(252,249,228,0.97),rgba(244,238,210,0.96))] p-8 shadow-soft">
           <div className="mb-8">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground text-card">
-              <span className="text-lg font-bold">N</span>
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[18px] border border-border/70 bg-background/80 text-card">
+              <span className="font-display text-3xl font-semibold text-foreground">N</span>
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Configurar consultorio</h1>
+            <h1 className="font-display text-5xl font-semibold leading-none text-foreground">
+              Configurar consultorio
+            </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               {user?.email
                 ? `SesiÃ³n iniciada como ${user.email}.`
@@ -56,14 +58,14 @@ const Setup = () => {
                 value={clinicName}
                 onChange={(event) => setClinicName(event.target.value)}
                 placeholder="Ej. Cami NutriciÃ³n"
-                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+                className="crm-input"
               />
             </div>
 
             <button
               type="submit"
               disabled={isBootstrapping}
-              className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isBootstrapping ? "Creando..." : "Crear consultorio"}
             </button>

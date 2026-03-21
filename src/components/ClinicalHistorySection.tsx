@@ -125,13 +125,15 @@ export default function ClinicalHistorySection({
   };
 
   return (
-    <section className="rounded-[28px] border border-border bg-card p-5 shadow-card md:p-6">
+    <section className="rounded-[30px] border border-border/80 bg-[linear-gradient(180deg,rgba(251,248,228,0.92),rgba(243,238,211,0.94))] p-5 shadow-soft md:p-6">
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary">
+        <div className="flex h-11 w-11 items-center justify-center rounded-[18px] border border-border/70 bg-background/80">
           <ClipboardList className="h-4.5 w-4.5 text-muted-foreground" />
         </div>
         <div>
-          <h3 className="font-semibold text-card-foreground">Historia clinica</h3>
+          <h3 className="font-display text-3xl font-semibold leading-none text-card-foreground">
+            Historia clinica
+          </h3>
           <p className="text-xs text-muted-foreground">
             Formato lista. Enter agrega un item nuevo.
           </p>
@@ -140,8 +142,8 @@ export default function ClinicalHistorySection({
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {fields.map((field) => (
-          <div key={field.key} className="border-b border-border/60 pb-2.5 last:border-b-0">
-            <label className="mb-1 block text-[13px] font-semibold text-foreground">
+          <div key={field.key} className="rounded-[20px] border border-border/55 bg-background/50 px-4 py-3">
+            <label className="mb-2 block text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {field.label}
             </label>
             <textarea
@@ -160,7 +162,7 @@ export default function ClinicalHistorySection({
           <button
             type="submit"
             disabled={isSaving}
-            className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Guardando..." : "Guardar historia clinica"}
           </button>

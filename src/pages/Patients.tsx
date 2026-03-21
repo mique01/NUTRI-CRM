@@ -51,13 +51,13 @@ const Patients = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-7xl px-4 py-6 md:px-8 md:py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
         <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-sm font-medium uppercase tracking-[0.22em] text-primary/70">
               Pacientes
             </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
+            <h2 className="mt-3 font-display text-5xl font-semibold leading-none tracking-tight text-foreground">
               Seguimiento clinico
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -68,23 +68,39 @@ const Patients = () => {
 
           <button
             onClick={() => setPatientDialogOpen(true)}
-            className="inline-flex items-center justify-center gap-2 self-start rounded-2xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-2 self-start rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4" />
             Nuevo paciente
           </button>
         </div>
 
-        <div className="mb-6 rounded-[28px] border border-border bg-card p-4 shadow-card md:p-5">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar pacientes por nombre..."
-              className="w-full rounded-2xl border border-border bg-background py-3 pl-10 pr-4 text-sm text-foreground transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
-            />
+        <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+          <div className="crm-panel p-4 md:p-5">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar pacientes por nombre..."
+                className="crm-input pl-11"
+              />
+            </div>
+          </div>
+
+          <div className="crm-panel flex items-center justify-between gap-4 p-5">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                Estado general
+              </p>
+              <p className="mt-2 font-display text-3xl font-semibold leading-none text-foreground">
+                {activePatients.length}
+              </p>
+            </div>
+            <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+              Activos
+            </div>
           </div>
         </div>
 
@@ -95,16 +111,20 @@ const Patients = () => {
             ))}
           </div>
         ) : patientsQuery.isError ? (
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+          <div className="rounded-[28px] border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
             {patientsQuery.error instanceof Error
               ? patientsQuery.error.message
               : "No se pudieron cargar los pacientes."}
           </div>
         ) : filteredPatients.length === 0 ? (
-          <div className="rounded-[28px] border border-border bg-card py-16 text-center text-muted-foreground shadow-card">
+          <div className="rounded-[28px] border border-border/80 bg-card/70 py-16 text-center text-muted-foreground shadow-soft">
             <Search className="mx-auto mb-3 h-10 w-10 opacity-30" />
-            <p className="text-sm font-medium">No se encontraron pacientes</p>
-            <p className="mt-1 text-xs">Proba con otro termino de busqueda</p>
+            <p className="font-display text-3xl font-semibold leading-none text-foreground">
+              No se encontraron pacientes
+            </p>
+            <p className="mt-2 text-xs uppercase tracking-[0.16em]">
+              Proba con otro termino de busqueda
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

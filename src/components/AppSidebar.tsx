@@ -18,45 +18,53 @@ const AppSidebar = () => {
   };
 
   return (
-    <aside className="hidden min-h-screen w-60 flex-col border-r border-sidebar-border bg-sidebar px-4 py-6 md:flex">
-      <div className="mb-8 px-2">
-        <h1 className="text-lg font-bold tracking-tight text-sidebar-foreground">
+    <aside className="hidden min-h-screen w-72 flex-col bg-sidebar px-6 py-7 md:flex">
+      <div className="mb-12">
+        <p className="font-display text-[3rem] font-semibold leading-none tracking-tight text-sidebar-foreground">
           NutriCRM
-        </h1>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {clinic?.name ?? "Gestion de pacientes"}
+        </p>
+        <p className="mt-3 text-xs uppercase tracking-[0.24em] text-muted-foreground">
+          {clinic?.name ?? "Portal clinico"}
         </p>
       </div>
 
-      <nav className="flex-1 space-y-1">
+      <nav className="flex-1 space-y-2">
         <NavLink
           to="/"
           end
-          className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+          className="flex items-center gap-3 rounded-[22px] border border-transparent px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-sidebar-foreground transition-all hover:border-border/40 hover:bg-sidebar-accent/60"
+          activeClassName="border-transparent bg-sidebar-accent text-sidebar-accent-foreground shadow-soft"
         >
-          <Home className="h-4 w-4" />
-          Inicio
+          <span className="h-10 w-1 rounded-full bg-transparent" />
+          <Home className="h-4.5 w-4.5" />
+          Panel
         </NavLink>
         <NavLink
           to="/patients"
-          className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
-          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+          className="flex items-center gap-3 rounded-[22px] border border-transparent px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-sidebar-foreground transition-all hover:border-border/40 hover:bg-sidebar-accent/60"
+          activeClassName="border-transparent bg-sidebar-accent text-sidebar-accent-foreground shadow-soft"
         >
-          <Users className="h-4 w-4" />
+          <span className="h-10 w-1 rounded-full bg-transparent" />
+          <Users className="h-4.5 w-4.5" />
           Pacientes
         </NavLink>
       </nav>
 
       {user ? (
-        <div className="mt-auto border-t border-sidebar-border px-2 pt-4">
-          <p className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</p>
-          <p className="mb-3 truncate text-xs text-muted-foreground">{user.email}</p>
+        <div className="mt-auto border-t border-sidebar-border/80 pt-6">
+          <div className="rounded-[24px] border border-border/70 bg-card/65 px-4 py-4 shadow-soft">
+            <p className="truncate font-display text-2xl font-semibold leading-none text-sidebar-foreground">
+              {user.name}
+            </p>
+            <p className="mt-2 truncate text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              {user.email}
+            </p>
+          </div>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="mt-4 flex w-full items-center gap-2 rounded-[18px] px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-foreground"
           >
-            <LogOut className="h-3.5 w-3.5" />
+            <LogOut className="h-4 w-4" />
             Cerrar sesion
           </button>
         </div>

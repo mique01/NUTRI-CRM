@@ -34,8 +34,10 @@ const AuthCallback = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-card">
-        <h1 className="text-xl font-bold text-foreground">Validando tu acceso</h1>
+      <div className="w-full max-w-md rounded-[34px] border border-border/80 bg-[linear-gradient(180deg,rgba(252,249,228,0.97),rgba(244,238,210,0.96))] p-8 text-center shadow-soft">
+        <h1 className="font-display text-4xl font-semibold leading-none text-foreground">
+          Validando tu acceso
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Estamos confirmando el enlace del email y preparando tu sesion.
         </p>

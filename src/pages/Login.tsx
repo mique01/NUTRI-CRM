@@ -47,12 +47,14 @@ const Login = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-card">
+      <div className="w-full max-w-md rounded-[34px] border border-border/80 bg-[linear-gradient(180deg,rgba(252,249,228,0.97),rgba(244,238,210,0.96))] p-8 shadow-soft">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-foreground text-card">
-            <span className="text-lg font-bold">N</span>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[18px] border border-border/70 bg-background/80 text-card">
+            <span className="font-display text-3xl font-semibold text-foreground">N</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Bienvenida a NutriCRM</h1>
+          <h1 className="font-display text-5xl font-semibold leading-none text-foreground">
+            Bienvenida a NutriCRM
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Ingresa con un email autorizado. Solo pueden entrar las cuentas que hayas invitado
             previamente desde Supabase.
@@ -95,7 +97,7 @@ const Login = () => {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="tu-email@dominio.com"
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/40"
+                className="crm-input"
               />
             </div>
 
@@ -110,7 +112,7 @@ const Login = () => {
               type="button"
               onClick={handleLogin}
               disabled={isSubmitting || !isConfigured || !email.trim()}
-              className="flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-card transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-3 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Mail className="h-4 w-4" />
               {isSubmitting ? "Enviando enlace..." : "Ingresar con email autorizado"}

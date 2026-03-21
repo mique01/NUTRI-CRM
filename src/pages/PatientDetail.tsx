@@ -274,23 +274,26 @@ const PatientDetail = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-7xl px-4 py-6 md:px-8 md:py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
         <Link
           to="/patients"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Todos los pacientes
         </Link>
 
-        <div className="mb-6 rounded-[30px] border border-border bg-card p-6 shadow-card md:p-8">
+        <div className="mb-6 rounded-[34px] border border-border/80 bg-[linear-gradient(180deg,rgba(251,248,228,0.94),rgba(243,238,211,0.96))] p-6 shadow-soft md:p-8">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-secondary text-lg font-bold text-secondary-foreground">
+              <div className="flex h-20 w-20 items-center justify-center rounded-[26px] border border-border/70 bg-background/80 text-xl font-bold text-secondary-foreground">
                 {getInitials(patient.firstName, patient.lastName)}
               </div>
               <div>
-                <h2 className="text-2xl font-semibold text-card-foreground">
+                <p className="text-xs uppercase tracking-[0.2em] text-primary/70">
+                  Ficha clinica
+                </p>
+                <h2 className="mt-3 font-display text-5xl font-semibold leading-none text-card-foreground">
                   {patient.firstName} {patient.lastName}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -323,7 +326,7 @@ const PatientDetail = () => {
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => setPatientDialogOpen(true)}
-                className="rounded-2xl border border-border bg-secondary px-4 py-2.5 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent"
+                className="rounded-full border border-border/80 bg-background/70 px-5 py-2.5 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent"
               >
                 <Pencil className="mr-1.5 inline h-3.5 w-3.5" />
                 Editar ficha
@@ -331,7 +334,7 @@ const PatientDetail = () => {
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <button className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
+                  <button className="rounded-full border border-destructive/20 bg-destructive/5 px-5 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
                     <Trash2 className="mr-1.5 inline h-3.5 w-3.5" />
                     Eliminar paciente
                   </button>
@@ -359,13 +362,15 @@ const PatientDetail = () => {
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_360px]">
-          <section className="rounded-[30px] border border-border bg-card p-6 shadow-card md:p-8">
+          <section className="rounded-[30px] border border-border/80 bg-[linear-gradient(180deg,rgba(251,248,228,0.92),rgba(243,238,211,0.94))] p-6 shadow-soft md:p-8">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-destructive/10">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[18px] border border-destructive/20 bg-destructive/10">
                 <TriangleAlert className="h-4.5 w-4.5 text-destructive" />
               </div>
               <div>
-                <h3 className="font-semibold text-card-foreground">Alertas del paciente</h3>
+                <h3 className="font-display text-3xl font-semibold leading-none text-card-foreground">
+                  Alertas del paciente
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   Se editan desde la ficha general del paciente.
                 </p>
@@ -391,14 +396,16 @@ const PatientDetail = () => {
             )}
           </section>
 
-          <section className="rounded-[30px] border border-border bg-card p-6 shadow-card md:p-8">
-            <h3 className="font-semibold text-card-foreground">Ultimo turno</h3>
+          <section className="rounded-[30px] border border-border/80 bg-[linear-gradient(180deg,rgba(251,248,228,0.92),rgba(243,238,211,0.94))] p-6 shadow-soft md:p-8">
+            <h3 className="font-display text-3xl font-semibold leading-none text-card-foreground">
+              Ultimo turno
+            </h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Solo referencia. No se agenda desde esta vista.
             </p>
 
             {lastAppointment ? (
-              <div className="mt-5 space-y-3 rounded-[24px] bg-muted p-4">
+              <div className="mt-5 space-y-3 rounded-[24px] border border-border/60 bg-background/75 p-4">
                 <div>
                   <p className="text-sm font-medium text-card-foreground">
                     {lastAppointment.appointmentType}
@@ -407,7 +414,7 @@ const PatientDetail = () => {
                     {formatDateTime(lastAppointment.startsAt)}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-background px-3 py-2 text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-border/60 bg-card/70 px-3 py-2 text-sm text-muted-foreground">
                   Estado: {lastAppointment.status}
                 </div>
                 {lastAppointment.notes ? (

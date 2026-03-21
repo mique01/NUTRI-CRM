@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,49 +6,49 @@
 
 @layer base {
   :root {
-    --background: 40 20% 97%;
-    --foreground: 30 10% 15%;
+    --background: 52 44% 94%;
+    --foreground: 32 17% 18%;
 
-    --card: 40 25% 99%;
-    --card-foreground: 30 10% 15%;
+    --card: 50 48% 93%;
+    --card-foreground: 32 17% 18%;
 
-    --popover: 40 25% 99%;
-    --popover-foreground: 30 10% 15%;
+    --popover: 50 48% 93%;
+    --popover-foreground: 32 17% 18%;
 
-    --primary: 152 28% 40%;
-    --primary-foreground: 40 25% 99%;
+    --primary: 145 22% 34%;
+    --primary-foreground: 50 44% 96%;
 
-    --secondary: 38 18% 91%;
-    --secondary-foreground: 30 10% 25%;
+    --secondary: 48 33% 88%;
+    --secondary-foreground: 32 16% 24%;
 
-    --muted: 38 14% 93%;
-    --muted-foreground: 30 6% 50%;
+    --muted: 47 31% 89%;
+    --muted-foreground: 34 9% 42%;
 
-    --accent: 38 18% 91%;
-    --accent-foreground: 30 10% 25%;
+    --accent: 47 35% 87%;
+    --accent-foreground: 32 16% 24%;
 
-    --destructive: 4 60% 55%;
-    --destructive-foreground: 40 25% 99%;
+    --destructive: 9 56% 54%;
+    --destructive-foreground: 50 44% 96%;
 
-    --border: 35 14% 88%;
-    --input: 35 14% 88%;
-    --ring: 152 28% 40%;
+    --border: 42 20% 78%;
+    --input: 42 20% 78%;
+    --ring: 145 22% 34%;
 
-    --radius: 0.75rem;
+    --radius: 1.1rem;
 
-    --sidebar-background: 38 18% 95%;
-    --sidebar-foreground: 30 10% 25%;
-    --sidebar-primary: 152 28% 40%;
-    --sidebar-primary-foreground: 40 25% 99%;
-    --sidebar-accent: 38 20% 90%;
-    --sidebar-accent-foreground: 30 10% 20%;
-    --sidebar-border: 35 14% 88%;
-    --sidebar-ring: 152 28% 40%;
+    --sidebar-background: 52 49% 93%;
+    --sidebar-foreground: 32 17% 22%;
+    --sidebar-primary: 145 22% 34%;
+    --sidebar-primary-foreground: 50 44% 96%;
+    --sidebar-accent: 49 37% 89%;
+    --sidebar-accent-foreground: 32 17% 22%;
+    --sidebar-border: 42 20% 81%;
+    --sidebar-ring: 145 22% 34%;
 
     /* Custom tokens */
-    --success: 152 35% 48%;
-    --warning: 38 70% 55%;
-    --info: 210 30% 55%;
+    --success: 142 26% 41%;
+    --warning: 31 72% 42%;
+    --info: 199 31% 48%;
   }
 }
 
@@ -59,16 +59,40 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'DM Sans', system-ui, sans-serif;
+    background-image: radial-gradient(circle at top, rgba(255, 252, 236, 0.95), rgba(243, 237, 208, 0.92));
+    font-family: 'Manrope', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply tracking-tight;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
   }
 }
 
 @layer utilities {
   .font-mono-app {
     font-family: 'DM Mono', monospace;
+  }
+
+  .font-display {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+
+  .crm-surface {
+    @apply border border-border/80 bg-card/80 shadow-soft backdrop-blur-sm;
+  }
+
+  .crm-panel {
+    @apply rounded-[32px] border border-border/80 bg-[linear-gradient(180deg,rgba(252,249,228,0.92),rgba(244,238,210,0.94))] shadow-[0_16px_34px_rgba(97,90,58,0.10)];
+  }
+
+  .crm-input {
+    @apply w-full rounded-[20px] border border-border/80 bg-background/80 px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary/35 focus:ring-2 focus:ring-ring/15;
   }
 }

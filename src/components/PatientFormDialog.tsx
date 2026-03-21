@@ -54,9 +54,11 @@ export default function PatientFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl rounded-[30px] border-border/70 bg-[linear-gradient(180deg,rgba(252,249,228,0.97),rgba(244,238,210,0.96))] p-7">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="font-display text-3xl font-semibold text-foreground">
+            {title}
+          </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
@@ -70,7 +72,7 @@ export default function PatientFormDialog({
                 value={formValues.firstName}
                 onChange={(event) => handleChange("firstName", event.target.value)}
                 required
-                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+                className="crm-input"
               />
             </div>
 
@@ -82,7 +84,7 @@ export default function PatientFormDialog({
                 value={formValues.lastName}
                 onChange={(event) => handleChange("lastName", event.target.value)}
                 required
-                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+                className="crm-input"
               />
             </div>
 
@@ -94,7 +96,7 @@ export default function PatientFormDialog({
                 type="date"
                 value={formValues.birthDate}
                 onChange={(event) => handleChange("birthDate", event.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+                className="crm-input"
               />
             </div>
 
@@ -106,7 +108,7 @@ export default function PatientFormDialog({
                 value={formValues.profession}
                 onChange={(event) => handleChange("profession", event.target.value)}
                 placeholder="Ej. Abogada"
-                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+                className="crm-input"
               />
             </div>
 
@@ -119,7 +121,7 @@ export default function PatientFormDialog({
                 value={formValues.email}
                 onChange={(event) => handleChange("email", event.target.value)}
                 placeholder="paciente@email.com"
-                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+                className="crm-input"
               />
             </div>
 
@@ -131,7 +133,7 @@ export default function PatientFormDialog({
                 value={formValues.phone}
                 onChange={(event) => handleChange("phone", event.target.value)}
                 placeholder="+54 11 ..."
-                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+                className="crm-input"
               />
             </div>
           </div>
@@ -143,7 +145,7 @@ export default function PatientFormDialog({
             <select
               value={formValues.status}
               onChange={(event) => handleChange("status", event.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground"
+              className="crm-input"
             >
               <option value="active">Activo</option>
               <option value="inactive">Inactivo</option>
@@ -159,7 +161,7 @@ export default function PatientFormDialog({
               onChange={(event) => handleChange("alerts", event.target.value)}
               rows={4}
               placeholder={"Una alerta por linea\nEj. Hipotiroidismo\nEj. Alergia a frutos secos"}
-              className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground"
+              className="crm-input min-h-[128px] p-4"
             />
           </div>
 
@@ -167,14 +169,14 @@ export default function PatientFormDialog({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="rounded-xl border border-border bg-secondary px-4 py-2.5 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent"
+              className="rounded-full border border-border/80 bg-background/70 px-5 py-2.5 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? "Guardando..." : submitLabel}
             </button>
