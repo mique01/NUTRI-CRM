@@ -4,6 +4,7 @@ import {
   getAuthenticatedUser,
   getBaseUrl,
   getMembership,
+  getProfileEmail,
   getPrimaryClinic,
   normalizeEmail,
   sendAdminAccessEmail,
@@ -49,7 +50,11 @@ export default async function handler(req, res) {
       return;
     }
 
-    const adminEmail = normalizeEmail(process.env.ACCESS_REQUEST_ADMIN_EMAIL);
+    let adminEmail = normalizeEmail(process.env.ACCESS_REQUEST_ADMIN_EMAIL);
+
+    if (!adminEmail) {
+      adminEmail = normalizeEmail(await getProfileEmail(serviceClient, clinic.created_by));
+    }
 
     if (adminEmail && normalizedEmail === adminEmail) {
       await ensureMembership(serviceClient, {

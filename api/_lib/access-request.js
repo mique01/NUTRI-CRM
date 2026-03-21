@@ -80,7 +80,7 @@ export async function getAuthenticatedUser(req) {
 export async function getPrimaryClinic(serviceClient) {
   const { data, error } = await serviceClient
     .from("clinics")
-    .select("id, name")
+    .select("id, name, created_by")
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -90,6 +90,25 @@ export async function getPrimaryClinic(serviceClient) {
   }
 
   return data;
+}
+
+export async function getProfileEmail(serviceClient, profileId) {
+  if (!profileId) {
+    return null;
+  }
+
+  const { data, error } = await serviceClient
+    .from("profiles")
+    .select("email")
+    .eq("id", profileId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.email ?? null;
 }
 
 export async function getMembership(serviceClient, profileId) {
