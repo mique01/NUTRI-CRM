@@ -57,7 +57,7 @@ const Patients = () => {
             <p className="text-sm font-medium uppercase tracking-[0.22em] text-primary/70">
               Pacientes
             </p>
-            <h2 className="mt-3 font-display text-5xl font-semibold leading-none tracking-tight text-foreground">
+            <h2 className="mt-3 font-display text-4xl font-semibold leading-none tracking-tight text-foreground">
               Seguimiento clinico
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -94,7 +94,7 @@ const Patients = () => {
               <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Estado general
               </p>
-              <p className="mt-2 font-display text-3xl font-semibold leading-none text-foreground">
+              <p className="mt-2 font-display text-2xl font-semibold leading-none text-foreground">
                 {activePatients.length}
               </p>
             </div>
@@ -119,7 +119,7 @@ const Patients = () => {
         ) : filteredPatients.length === 0 ? (
           <div className="rounded-[28px] border border-border/80 bg-card/70 py-16 text-center text-muted-foreground shadow-soft">
             <Search className="mx-auto mb-3 h-10 w-10 opacity-30" />
-            <p className="font-display text-3xl font-semibold leading-none text-foreground">
+            <p className="font-display text-2xl font-semibold leading-none text-foreground">
               No se encontraron pacientes
             </p>
             <p className="mt-2 text-xs uppercase tracking-[0.16em]">

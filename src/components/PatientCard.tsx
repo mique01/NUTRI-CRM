@@ -19,7 +19,7 @@ const PatientCard = ({ patient }: PatientCardProps) => {
             {getInitials(patient.firstName, patient.lastName)}
           </div>
           <div>
-            <h3 className="font-display text-2xl font-semibold leading-none text-card-foreground">
+            <h3 className="font-display text-xl font-semibold leading-none text-card-foreground">
               {patient.firstName} {patient.lastName}
             </h3>
             <p className="mt-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">

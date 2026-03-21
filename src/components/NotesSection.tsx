@@ -32,7 +32,7 @@ const NotesSection = ({
     <div className="rounded-[30px] border border-border/80 bg-[linear-gradient(180deg,rgba(251,248,228,0.92),rgba(243,238,211,0.94))] p-6 shadow-soft">
       <div className="mb-4 flex items-center gap-2">
         <MessageSquare className="h-4.5 w-4.5 text-primary/70" />
-        <h3 className="font-display text-3xl font-semibold leading-none text-card-foreground">
+        <h3 className="font-display text-2xl font-semibold leading-none text-card-foreground">
           Notas e historial
         </h3>
       </div>

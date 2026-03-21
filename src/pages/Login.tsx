@@ -50,9 +50,9 @@ const Login = () => {
       <div className="w-full max-w-md rounded-[34px] border border-border/80 bg-[linear-gradient(180deg,rgba(252,249,228,0.97),rgba(244,238,210,0.96))] p-8 shadow-soft">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[18px] border border-border/70 bg-background/80 text-card">
-            <span className="font-display text-3xl font-semibold text-foreground">N</span>
+            <span className="font-display text-2xl font-semibold text-foreground">N</span>
           </div>
-          <h1 className="font-display text-5xl font-semibold leading-none text-foreground">
+          <h1 className="font-display text-4xl font-semibold leading-none text-foreground">
             Bienvenida a NutriCRM
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">

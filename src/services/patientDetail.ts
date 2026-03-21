@@ -1,5 +1,10 @@
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { calculateAge } from "@/lib/utils";
+import { listPatientAppointments } from "@/services/appointments";
+import { getClinicalHistory } from "@/services/clinicalHistory";
+import { listMedicalStudies, listNutritionPlans } from "@/services/files";
+import { listPatientNotes } from "@/services/notes";
+import { getPatientById } from "@/services/patients";
 import {
   emptyClinicalHistoryFormValues,
   type Appointment,
@@ -10,6 +15,21 @@ import {
   type PatientDetailBundle,
   type PatientNote,
 } from "@/types/domain";
+
+function shouldFallbackToLegacyPatientBundle(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const code = "code" in error && typeof error.code === "string" ? error.code : "";
+  const message =
+    "message" in error && typeof error.message === "string" ? error.message.toLowerCase() : "";
+
+  return (
+    code === "PGRST202" ||
+    code === "42883" ||
+    code === "42501" ||
+    message.includes("get_patient_detail_bundle")
+  );
+}
 
 function normalizeAlerts(value?: string | string[] | null) {
   if (Array.isArray(value)) {
@@ -133,9 +153,34 @@ export async function getPatientDetailBundle(
 ): Promise<PatientDetailBundle | null> {
   assertSupabaseConfigured();
 
-  const { data, error } = await supabase.rpc("get_patient_detail_bundle", {
+  let { data, error } = await supabase.rpc("get_patient_detail_bundle", {
     target_patient_id: patientId,
   });
+
+  if (error && shouldFallbackToLegacyPatientBundle(error)) {
+    const [patient, history, notes, appointments, nutritionPlans, medicalStudies] =
+      await Promise.all([
+        getPatientById(patientId),
+        getClinicalHistory(patientId),
+        listPatientNotes(patientId),
+        listPatientAppointments(patientId),
+        listNutritionPlans(patientId),
+        listMedicalStudies(patientId),
+      ]);
+
+    if (!patient) {
+      return null;
+    }
+
+    return {
+      patient,
+      history,
+      notes,
+      appointments,
+      nutritionPlans,
+      medicalStudies,
+    };
+  }
 
   if (error) {
     throw error;

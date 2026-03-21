@@ -131,7 +131,7 @@ export default function ClinicalHistorySection({
           <ClipboardList className="h-4.5 w-4.5 text-muted-foreground" />
         </div>
         <div>
-          <h3 className="font-display text-3xl font-semibold leading-none text-card-foreground">
+          <h3 className="font-display text-2xl font-semibold leading-none text-card-foreground">
             Historia clinica
           </h3>
           <p className="text-xs text-muted-foreground">

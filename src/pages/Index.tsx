@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useDashboardConsultationsQuery } from "@/hooks/use-crm-data";
@@ -132,6 +132,7 @@ const timeFormatter = new Intl.DateTimeFormat("es-AR", {
 
 const Home = () => {
   const today = useMemo(() => new Date(), []);
+  const dayAgendaRef = useRef<HTMLElement | null>(null);
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
@@ -209,26 +210,41 @@ const Home = () => {
     return Array.from(groups.entries());
   }, [selectedDayConsultations]);
 
+  const handleSelectDate = (date: Date, isCurrentMonth: boolean) => {
+    setSelectedDate(date);
+
+    if (!isCurrentMonth) {
+      setVisibleMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    }
+
+    window.setTimeout(() => {
+      dayAgendaRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 140);
+  };
+
   return (
     <AppLayout>
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,251,231,0.98),_rgba(243,238,210,0.92))]">
         <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
           <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.28em] text-primary/70">
+              <p className="text-xs font-medium uppercase tracking-[0.28em] text-primary/70">
                 Inicio
               </p>
-              <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+              <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
                 Panel de Control
               </h1>
-              <p className="mt-2 text-sm uppercase tracking-[0.22em] text-muted-foreground">
+              <p className="mt-2 text-xs uppercase tracking-[0.22em] text-muted-foreground">
                 {pageDateLabel}
               </p>
             </div>
 
             <div className="inline-flex w-full max-w-sm items-center justify-between rounded-[24px] border border-border/80 bg-card/70 px-4 py-3 shadow-soft">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/70">
                   Agenda activa
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -245,13 +261,13 @@ const Home = () => {
             <section className="rounded-[34px] border border-[#6d755f]/60 bg-[linear-gradient(180deg,rgba(250,247,221,0.9),rgba(244,240,214,0.95))] p-5 shadow-[0_16px_36px_rgba(91,88,66,0.12)] md:p-6">
               <div className="mb-6 flex items-start justify-between gap-4">
                 <div className="text-center sm:text-left">
-                  <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-foreground md:text-[2rem]">
-                    <span className="block text-[0.95em] text-primary/82">{yearLabel}</span>
-                    <span className="block text-[0.85em] uppercase tracking-[0.12em] text-[#a85f1d]">
+                  <h2 className="font-display text-[1.55rem] font-semibold tracking-tight text-foreground md:text-[1.7rem]">
+                    <span className="block text-[0.9em] text-primary/82">{yearLabel}</span>
+                    <span className="block text-[0.72em] uppercase tracking-[0.12em] text-[#a85f1d]">
                       {monthLabel}
                     </span>
                   </h2>
-                  <p className="mt-2 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
+                  <p className="mt-2 text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
                     Calendario del consultorio
                   </p>
                 </div>
@@ -301,15 +317,9 @@ const Home = () => {
                     <button
                       key={date.toISOString()}
                       type="button"
-                      onClick={() => {
-                        setSelectedDate(date);
-
-                        if (!isCurrentMonth) {
-                          setVisibleMonth(new Date(date.getFullYear(), date.getMonth(), 1));
-                        }
-                      }}
+                      onClick={() => handleSelectDate(date, isCurrentMonth)}
                       className={cn(
-                        "relative mx-auto flex h-12 w-full max-w-[46px] items-center justify-center rounded-[16px] border border-transparent text-base font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+                        "relative mx-auto flex h-12 w-full max-w-[46px] items-center justify-center rounded-[16px] border border-transparent text-[15px] font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
                         isCurrentMonth ? "text-foreground" : "text-muted-foreground/35",
                         !isSelected && "hover:border-[#6d755f]/40 hover:bg-card/35 hover:text-foreground",
                         isToday && !isSelected && "border-primary/20 bg-card/20",
@@ -335,29 +345,111 @@ const Home = () => {
             <section className="rounded-[30px] border border-[#6d755f]/55 bg-card/82 p-5 shadow-[0_14px_30px_rgba(91,88,66,0.12)] md:p-6 xl:h-fit">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/70">
-                    Agenda del dia
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary/70">
+                    Consultas de la semana
                   </p>
-                  <h2 className="mt-2 font-display text-4xl font-semibold tracking-tight text-foreground">
-                    {selectedDayLabel}
+                  <h2 className="mt-2 font-display text-[2.15rem] font-semibold tracking-tight text-foreground">
+                    Semana activa
                   </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Del {weekRangeFormatter.format(weekStart).toLowerCase()} al{" "}
+                    {weekRangeFormatter.format(weekEndLabelDate).toLowerCase()}
+                  </p>
                 </div>
 
                 <div className="rounded-2xl border border-border bg-background/80 px-3 py-2 text-sm font-semibold text-foreground">
-                  {selectedDayConsultations.length}
+                  {selectedWeekConsultations.length}
                 </div>
               </div>
 
               {consultationsQuery.isLoading ? (
                 <div className="mt-6 rounded-[22px] border border-dashed border-border bg-muted/40 px-4 py-5 text-sm text-muted-foreground">
+                  Cargando agenda semanal...
+                </div>
+              ) : selectedWeekConsultations.length === 0 ? (
+                <div className="mt-6 rounded-[22px] border border-dashed border-border bg-muted/40 px-4 py-5 text-sm text-muted-foreground">
+                  No hay consultas cargadas para la semana seleccionada.
+                </div>
+              ) : (
+                <div className="mt-6 space-y-3">
+                  {selectedWeekConsultations.map((consultation) => {
+                    const consultationDate = new Date(consultation.startsAt);
+                    const weekday = shortWeekdayFormatter
+                      .format(consultationDate)
+                      .replace(".", "")
+                      .toUpperCase();
+                    const dayNumber = dayNumberFormatter.format(consultationDate);
+
+                    return (
+                      <article
+                        key={consultation.id}
+                        className="flex flex-col gap-4 rounded-[22px] border border-[#6d755f]/40 bg-background/70 px-4 py-4 shadow-soft sm:flex-row sm:items-center"
+                      >
+                        <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-[16px] border border-[#6d755f]/35 bg-card/75 text-center">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#b76b28]">
+                            {weekday}
+                          </span>
+                          <span className="mt-1 font-display text-xl font-semibold leading-none text-foreground">
+                            {dayNumber}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-display text-[1.9rem] font-semibold leading-none text-foreground">
+                            {consultation.patientName}
+                          </p>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {capitalizeLabel(
+                              selectedDayFormatter.format(consultationDate).toLowerCase(),
+                            )}{" "}
+                            - {timeFormatter.format(consultationDate)}
+                          </p>
+                        </div>
+
+                        <span
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-sm font-medium",
+                            getStatusBadgeClass(consultation.status),
+                          )}
+                        >
+                          {getStatusLabel(consultation.status)}
+                        </span>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section
+              ref={dayAgendaRef}
+              className="xl:col-span-2 rounded-[30px] border border-[#6d755f]/55 bg-[linear-gradient(180deg,rgba(250,247,221,0.82),rgba(245,241,214,0.92))] p-5 shadow-[0_14px_30px_rgba(91,88,66,0.12)] md:p-6"
+            >
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary/70">
+                    Agenda del dia
+                  </p>
+                  <h2 className="mt-2 font-display text-[2.15rem] font-semibold tracking-tight text-foreground">
+                    {selectedDayLabel}
+                  </h2>
+                </div>
+
+                <div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+                  {selectedDayConsultations.length} consultas
+                </div>
+              </div>
+
+              {consultationsQuery.isLoading ? (
+                <div className="rounded-[22px] border border-dashed border-border bg-card/45 px-4 py-5 text-sm text-muted-foreground">
                   Cargando agenda diaria...
                 </div>
               ) : selectedDayConsultations.length === 0 ? (
-                <div className="mt-6 rounded-[22px] border border-dashed border-border bg-muted/40 px-4 py-5 text-sm text-muted-foreground">
+                <div className="rounded-[22px] border border-dashed border-border bg-card/45 px-4 py-5 text-sm text-muted-foreground">
                   No hay consultas cargadas para este dia.
                 </div>
               ) : (
-                <div className="relative mt-8">
+                <div key={selectedDate.toDateString()} className="relative mt-8 animate-fade-in">
                   <div className="absolute bottom-3 left-[7px] top-2 w-px bg-border" />
 
                   <div className="space-y-6">
@@ -382,7 +474,7 @@ const Home = () => {
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <p className="truncate font-display text-3xl font-semibold text-foreground">
+                                  <p className="truncate font-display text-[1.9rem] font-semibold text-foreground">
                                     {consultation.patientName}
                                   </p>
                                   <p className="mt-2 text-sm italic text-muted-foreground">
@@ -405,85 +497,6 @@ const Home = () => {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </section>
-
-            <section className="xl:col-span-2 rounded-[30px] border border-[#6d755f]/55 bg-[linear-gradient(180deg,rgba(250,247,221,0.82),rgba(245,241,214,0.92))] p-5 shadow-[0_14px_30px_rgba(91,88,66,0.12)] md:p-6">
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="font-display text-4xl font-semibold tracking-tight text-foreground">
-                    Consultas de la semana
-                  </h2>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Del {weekRangeFormatter.format(weekStart).toLowerCase()} al{" "}
-                    {weekRangeFormatter.format(weekEndLabelDate).toLowerCase()}
-                  </p>
-                </div>
-
-                <div className="rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-                  {selectedWeekConsultations.length} consultas
-                </div>
-              </div>
-
-              {consultationsQuery.isLoading ? (
-                <div className="rounded-[22px] border border-dashed border-border bg-card/45 px-4 py-5 text-sm text-muted-foreground">
-                  Cargando agenda semanal...
-                </div>
-              ) : selectedWeekConsultations.length === 0 ? (
-                <div className="rounded-[22px] border border-dashed border-border bg-card/45 px-4 py-5 text-sm text-muted-foreground">
-                  No hay consultas cargadas para la semana seleccionada.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {selectedWeekConsultations.map((consultation) => {
-                    const consultationDate = new Date(consultation.startsAt);
-                    const weekday = shortWeekdayFormatter
-                      .format(consultationDate)
-                      .replace(".", "")
-                      .toUpperCase();
-                    const dayNumber = dayNumberFormatter.format(consultationDate);
-
-                    return (
-                      <article
-                        key={consultation.id}
-                        className="flex flex-col gap-4 rounded-[24px] border border-[#6d755f]/45 bg-card/55 px-4 py-4 shadow-card sm:flex-row sm:items-center"
-                      >
-                        <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-[18px] border border-[#6d755f]/45 bg-background/80 text-center">
-                          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#b76b28]">
-                            {weekday}
-                          </span>
-                          <span className="mt-1 font-serif text-2xl font-semibold text-foreground">
-                            {dayNumber}
-                          </span>
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-display text-3xl font-semibold leading-none text-foreground">
-                            {consultation.patientName}
-                          </p>
-                          <p className="mt-2 text-sm text-muted-foreground">
-                            {capitalizeLabel(
-                              selectedDayFormatter.format(consultationDate).toLowerCase(),
-                            )}{" "}
-                            - {timeFormatter.format(consultationDate)}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={cn(
-                              "rounded-full border px-3 py-1.5 text-sm font-medium",
-                              getStatusBadgeClass(consultation.status),
-                            )}
-                          >
-                            {getStatusLabel(consultation.status)}
-                          </span>
-                          <span className="h-2 w-2 rounded-full bg-muted-foreground/60" />
-                        </div>
-                      </article>
-                    );
-                  })}
                 </div>
               )}
             </section>

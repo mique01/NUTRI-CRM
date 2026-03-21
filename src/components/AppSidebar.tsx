@@ -20,7 +20,7 @@ const AppSidebar = () => {
   return (
     <aside className="hidden min-h-screen w-72 flex-col bg-sidebar px-6 py-7 md:flex">
       <div className="mb-12">
-        <p className="font-display text-[3rem] font-semibold leading-none tracking-tight text-sidebar-foreground">
+        <p className="font-display text-[2.5rem] font-semibold leading-none tracking-tight text-sidebar-foreground">
           NutriCRM
         </p>
         <p className="mt-3 text-xs uppercase tracking-[0.24em] text-muted-foreground">
@@ -53,7 +53,7 @@ const AppSidebar = () => {
       {user ? (
         <div className="mt-auto border-t border-sidebar-border/80 pt-6">
           <div className="rounded-[24px] border border-border/70 bg-card/65 px-4 py-4 shadow-soft">
-            <p className="truncate font-display text-2xl font-semibold leading-none text-sidebar-foreground">
+            <p className="truncate font-display text-xl font-semibold leading-none text-sidebar-foreground">
               {user.name}
             </p>
             <p className="mt-2 truncate text-xs uppercase tracking-[0.16em] text-muted-foreground">

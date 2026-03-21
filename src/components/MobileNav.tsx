@@ -21,7 +21,7 @@ const MobileNav = () => {
     <header className="border-b border-sidebar-border/80 bg-sidebar/95 px-4 py-4 backdrop-blur md:hidden">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold leading-none text-sidebar-foreground">
+          <h1 className="font-display text-2xl font-semibold leading-none text-sidebar-foreground">
             NutriCRM
           </h1>
           <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">

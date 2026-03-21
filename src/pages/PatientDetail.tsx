@@ -289,7 +289,7 @@ const PatientDetail = () => {
                 <p className="text-xs uppercase tracking-[0.2em] text-primary/70">
                   Ficha clinica
                 </p>
-                <h2 className="mt-3 font-display text-5xl font-semibold leading-none text-card-foreground">
+                <h2 className="mt-3 font-display text-4xl font-semibold leading-none text-card-foreground">
                   {patient.firstName} {patient.lastName}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -364,7 +364,7 @@ const PatientDetail = () => {
                 <TriangleAlert className="h-4.5 w-4.5 text-destructive" />
               </div>
               <div>
-                <h3 className="font-display text-3xl font-semibold leading-none text-card-foreground">
+                <h3 className="font-display text-2xl font-semibold leading-none text-card-foreground">
                   Alertas del paciente
                 </h3>
                 <p className="text-xs text-muted-foreground">
@@ -393,7 +393,7 @@ const PatientDetail = () => {
           </section>
 
           <section className="rounded-[30px] border border-border/80 bg-[linear-gradient(180deg,rgba(251,248,228,0.92),rgba(243,238,211,0.94))] p-6 shadow-soft md:p-8">
-            <h3 className="font-display text-3xl font-semibold leading-none text-card-foreground">
+            <h3 className="font-display text-2xl font-semibold leading-none text-card-foreground">
               Ultimo turno
             </h3>
             <p className="mt-1 text-xs text-muted-foreground">

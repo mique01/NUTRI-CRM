@@ -61,6 +61,7 @@
     @apply bg-background text-foreground antialiased;
     background-image: radial-gradient(circle at top, rgba(255, 252, 236, 0.95), rgba(243, 237, 208, 0.92));
     font-family: 'Manrope', system-ui, sans-serif;
+    font-size: 15px;
   }
 
   h1, h2, h3, h4, h5, h6 {

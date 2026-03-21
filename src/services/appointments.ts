@@ -9,6 +9,21 @@ import type {
 const APPOINTMENT_SELECT =
   "id, clinic_id, patient_id, nutritionist_profile_id, starts_at, ends_at, appointment_type, notes, status, external_provider, external_event_id, sync_state";
 
+function shouldFallbackToLegacyDashboardQuery(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const code = "code" in error && typeof error.code === "string" ? error.code : "";
+  const message =
+    "message" in error && typeof error.message === "string" ? error.message.toLowerCase() : "";
+
+  return (
+    code === "PGRST202" ||
+    code === "42883" ||
+    code === "42501" ||
+    message.includes("list_dashboard_consultations")
+  );
+}
+
 function mapAppointment(row: any): Appointment {
   return {
     id: row.id,
@@ -106,10 +121,19 @@ export async function listDashboardConsultations(monthDate = new Date()) {
   const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
   const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1);
 
-  const { data, error } = await supabase.rpc("list_dashboard_consultations", {
+  let { data, error } = await supabase.rpc("list_dashboard_consultations", {
     month_start: monthStart.toISOString(),
     month_end: monthEnd.toISOString(),
   });
+
+  if (error && shouldFallbackToLegacyDashboardQuery(error)) {
+    ({ data, error } = await supabase
+      .from("appointments")
+      .select("id, patient_id, starts_at, status, patients!inner(first_name, last_name)")
+      .gte("starts_at", monthStart.toISOString())
+      .lt("starts_at", monthEnd.toISOString())
+      .order("starts_at", { ascending: true }));
+  }
 
   if (error) {
     throw error;
@@ -117,10 +141,12 @@ export async function listDashboardConsultations(monthDate = new Date()) {
 
   return ((data ?? []) as any[]).map(
     (row): DashboardConsultation => {
+      const patient = Array.isArray((row as any).patients) ? (row as any).patients[0] : (row as any).patients;
+
       return {
         id: row.id,
         patientId: row.patient_id,
-        patientName: row.patient_name ?? "",
+        patientName: row.patient_name ?? `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim(),
         startsAt: row.starts_at,
         status: row.status,
       };

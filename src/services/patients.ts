@@ -5,6 +5,8 @@ import type { Patient, PatientFormValues } from "@/types/domain";
 const PATIENT_BASE_SELECT =
   "id, clinic_id, first_name, last_name, birth_date, profession, email, phone, status, created_at, updated_at";
 const PATIENT_WITH_ALERTS_SELECT = `${PATIENT_BASE_SELECT}, alerts`;
+const LEGACY_PATIENT_WITH_APPOINTMENTS_SELECT = `${PATIENT_WITH_ALERTS_SELECT}, appointments(starts_at, status)`;
+const LEGACY_PATIENT_BASE_WITH_APPOINTMENTS_SELECT = `${PATIENT_BASE_SELECT}, appointments(starts_at, status)`;
 
 function getNextAppointment(appointments: Array<{ starts_at: string; status: string }> = []) {
   const now = new Date();
@@ -45,6 +47,32 @@ function isMissingAlertsColumn(error: unknown) {
     "message" in error && typeof error.message === "string" ? error.message : "";
 
   return message.toLowerCase().includes("alerts");
+}
+
+function shouldFallbackToLegacyPatientsQuery(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const code = "code" in error && typeof error.code === "string" ? error.code : "";
+  const message =
+    "message" in error && typeof error.message === "string" ? error.message.toLowerCase() : "";
+
+  return (
+    code === "PGRST202" ||
+    code === "42883" ||
+    code === "42501" ||
+    message.includes("list_patients_overview")
+  );
+}
+
+async function selectLegacyPatientsList(withAlerts: boolean) {
+  return supabase
+    .from("patients")
+    .select(
+      withAlerts
+        ? LEGACY_PATIENT_WITH_APPOINTMENTS_SELECT
+        : LEGACY_PATIENT_BASE_WITH_APPOINTMENTS_SELECT,
+    )
+    .order("created_at", { ascending: false });
 }
 
 async function selectPatientsList(withAlerts: boolean) {
@@ -132,11 +160,19 @@ function normalizePatientPayload(values: PatientFormValues) {
 
 export async function listPatients() {
   assertSupabaseConfigured();
+  let usedLegacySelect = false;
 
   let { data, error } = await selectPatientsList(true);
 
+  if (error && shouldFallbackToLegacyPatientsQuery(error)) {
+    usedLegacySelect = true;
+    ({ data, error } = await selectLegacyPatientsList(true));
+  }
+
   if (error && isMissingAlertsColumn(error)) {
-    ({ data, error } = await selectPatientsList(false));
+    ({ data, error } = usedLegacySelect
+      ? await selectLegacyPatientsList(false)
+      : await selectPatientsList(false));
   }
 
   if (error) {

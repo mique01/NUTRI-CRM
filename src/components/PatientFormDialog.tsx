@@ -56,7 +56,7 @@ export default function PatientFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl rounded-[30px] border-border/70 bg-[linear-gradient(180deg,rgba(252,249,228,0.97),rgba(244,238,210,0.96))] p-7">
         <DialogHeader>
-          <DialogTitle className="font-display text-3xl font-semibold text-foreground">
+          <DialogTitle className="font-display text-2xl font-semibold text-foreground">
             {title}
           </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
