@@ -40,9 +40,12 @@ Creá un archivo `.env.local` basado en [.env.example](/C:/Users/Miqueas00/Deskt
 ```bash
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your-public-anon-key
+ILOVEPDF_PUBLIC_KEY=your-ilovepdf-public-key
+ILOVEPDF_SECRET_KEY=your-ilovepdf-secret-key
 ```
 
-No uses la `service_role` en este frontend.
+No uses la `service_role` en este frontend. Las claves de `iLovePDF` se usan solo
+en la funcion serverless.
 
 ## 4. Desarrollo local
 
@@ -68,10 +71,12 @@ La app queda en `http://localhost:8080`.
 4. Agregá las variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
+   - `ILOVEPDF_PUBLIC_KEY`
+   - `ILOVEPDF_SECRET_KEY`
 5. Deployá.
 6. Volvé a Supabase y actualizá las URLs OAuth productivas si cambió el dominio.
 
-El archivo [vercel.json](/C:/Users/Miqueas00/Desktop/crm%20cami/vercel.json) ya deja resueltas las rutas SPA.
+El archivo [vercel.json](/C:/Users/Miqueas00/Desktop/crm%20cami/vercel.json) ya deja resueltas las rutas SPA y deja libre `/api` para la compresion de PDF.
 
 ## Estructura importante
 

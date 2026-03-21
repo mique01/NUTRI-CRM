@@ -49,6 +49,8 @@ const PatientDetail = () => {
   const { clinic, user } = useAuth();
   const queryClient = useQueryClient();
   const [patientDialogOpen, setPatientDialogOpen] = useState(false);
+  const [planUploadStatus, setPlanUploadStatus] = useState<string | null>(null);
+  const [studyUploadStatus, setStudyUploadStatus] = useState<string | null>(null);
 
   const patientQuery = usePatientQuery(id);
   const historyQuery = useClinicalHistoryQuery(id);
@@ -150,7 +152,8 @@ const PatientDetail = () => {
   });
 
   const uploadPlanMutation = useMutation({
-    mutationFn: (file: File) => uploadNutritionPlan(clinic!.id, id!, user!.id, file),
+    mutationFn: (file: File) =>
+      uploadNutritionPlan(clinic!.id, id!, user!.id, file, setPlanUploadStatus),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.patientPlans(id!) });
       toast.success("Plan alimenticio subido.");
@@ -179,7 +182,8 @@ const PatientDetail = () => {
   });
 
   const uploadStudyMutation = useMutation({
-    mutationFn: (file: File) => uploadMedicalStudy(clinic!.id, id!, user!.id, file),
+    mutationFn: (file: File) =>
+      uploadMedicalStudy(clinic!.id, id!, user!.id, file, setStudyUploadStatus),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.patientStudies(id!) });
       toast.success("Estudio medico subido.");
@@ -439,6 +443,7 @@ const PatientDetail = () => {
                 fileType: "pdf",
               }))}
               uploadLabel="Subir plan PDF"
+              uploadStatusLabel={planUploadStatus ?? undefined}
               emptyMessage="Sin planes cargados todavia"
               accept=".pdf,application/pdf"
               isUploading={uploadPlanMutation.isPending}
@@ -456,6 +461,7 @@ const PatientDetail = () => {
                 fileType: study.fileType,
               }))}
               uploadLabel="Subir estudio"
+              uploadStatusLabel={studyUploadStatus ?? undefined}
               emptyMessage="Sin estudios cargados todavia"
               accept=".pdf,image/*"
               isUploading={uploadStudyMutation.isPending}

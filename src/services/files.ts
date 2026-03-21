@@ -5,6 +5,17 @@ import type { MedicalStudy, NutritionPlan, StudyFileType } from "@/types/domain"
 const NUTRITION_PLANS_BUCKET = "nutrition-plans";
 const MEDICAL_STUDIES_BUCKET = "medical-studies";
 
+type UploadStatusHandler = (status: string | null) => void;
+
+interface ProcessAndUploadParams {
+  bucketName: string;
+  clinicId: string;
+  patientId: string;
+  type: "plan" | "study";
+  file: File;
+  onStatusChange?: UploadStatusHandler;
+}
+
 function mapNutritionPlan(row: any): NutritionPlan {
   return {
     id: row.id,
@@ -36,8 +47,13 @@ function mapMedicalStudy(row: any): MedicalStudy {
   };
 }
 
-function buildStoragePath(clinicId: string, patientId: string, fileName: string) {
-  return `${clinicId}/${patientId}/${Date.now()}-${sanitizeFileName(fileName)}`;
+function buildStoragePath(
+  clinicId: string,
+  patientId: string,
+  type: "plan" | "study",
+  fileName: string,
+) {
+  return `${clinicId}/${patientId}/${type}/${Date.now()}-${sanitizeFileName(fileName)}`;
 }
 
 function getStudyFileType(file: File): StudyFileType {
@@ -64,6 +80,59 @@ async function removeFromBucket(bucketName: string, storagePath: string) {
   }
 }
 
+async function compressPdf(file: File, onStatusChange?: UploadStatusHandler) {
+  onStatusChange?.("Comprimiendo PDF...");
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/compress-pdf", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("No pudimos comprimir el PDF.");
+  }
+
+  const blob = await response.blob();
+
+  return new File([blob], file.name, {
+    type: "application/pdf",
+  });
+}
+
+export async function processAndUpload({
+  bucketName,
+  clinicId,
+  patientId,
+  type,
+  file,
+  onStatusChange,
+}: ProcessAndUploadParams) {
+  assertSupabaseConfigured();
+
+  let finalFile = file;
+
+  try {
+    if (file.type === "application/pdf") {
+      finalFile = await compressPdf(file, onStatusChange);
+    }
+
+    onStatusChange?.("Subiendo archivo...");
+
+    const storagePath = buildStoragePath(clinicId, patientId, type, file.name);
+    await uploadToBucket(bucketName, storagePath, finalFile);
+
+    return {
+      file: finalFile,
+      storagePath,
+    };
+  } finally {
+    onStatusChange?.(null);
+  }
+}
+
 export async function listNutritionPlans(patientId: string) {
   assertSupabaseConfigured();
 
@@ -85,12 +154,18 @@ export async function uploadNutritionPlan(
   patientId: string,
   profileId: string,
   file: File,
+  onStatusChange?: UploadStatusHandler,
 ) {
   assertSupabaseConfigured();
 
-  const storagePath = buildStoragePath(clinicId, patientId, file.name);
-
-  await uploadToBucket(NUTRITION_PLANS_BUCKET, storagePath, file);
+  const { file: finalFile, storagePath } = await processAndUpload({
+    bucketName: NUTRITION_PLANS_BUCKET,
+    clinicId,
+    patientId,
+    type: "plan",
+    file,
+    onStatusChange,
+  });
 
   const title = file.name.replace(/\.[^.]+$/, "");
 
@@ -103,8 +178,8 @@ export async function uploadNutritionPlan(
       effective_date: new Date().toISOString().slice(0, 10),
       storage_path: storagePath,
       file_name: file.name,
-      mime_type: file.type || "application/pdf",
-      size_bytes: file.size,
+      mime_type: finalFile.type || "application/pdf",
+      size_bytes: finalFile.size,
       uploaded_by: profileId,
     })
     .select("*")
@@ -165,12 +240,18 @@ export async function uploadMedicalStudy(
   patientId: string,
   profileId: string,
   file: File,
+  onStatusChange?: UploadStatusHandler,
 ) {
   assertSupabaseConfigured();
 
-  const storagePath = buildStoragePath(clinicId, patientId, file.name);
-
-  await uploadToBucket(MEDICAL_STUDIES_BUCKET, storagePath, file);
+  const { file: finalFile, storagePath } = await processAndUpload({
+    bucketName: MEDICAL_STUDIES_BUCKET,
+    clinicId,
+    patientId,
+    type: "study",
+    file,
+    onStatusChange,
+  });
 
   const title = file.name.replace(/\.[^.]+$/, "");
 
@@ -181,11 +262,11 @@ export async function uploadMedicalStudy(
       patient_id: patientId,
       title,
       study_date: new Date().toISOString().slice(0, 10),
-      file_type: getStudyFileType(file),
+      file_type: getStudyFileType(finalFile),
       storage_path: storagePath,
       file_name: file.name,
-      mime_type: file.type || "application/octet-stream",
-      size_bytes: file.size,
+      mime_type: finalFile.type || "application/octet-stream",
+      size_bytes: finalFile.size,
       uploaded_by: profileId,
     })
     .select("*")

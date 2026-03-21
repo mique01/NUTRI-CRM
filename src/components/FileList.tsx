@@ -13,6 +13,7 @@ interface FileListProps {
   title: string;
   items: FileListItem[];
   uploadLabel: string;
+  uploadStatusLabel?: string;
   emptyMessage: string;
   accept?: string;
   isUploading?: boolean;
@@ -25,6 +26,7 @@ const FileList = ({
   title,
   items,
   uploadLabel,
+  uploadStatusLabel,
   emptyMessage,
   accept,
   isUploading = false,
@@ -110,7 +112,7 @@ const FileList = ({
         className="w-full rounded-xl border border-dashed border-border bg-muted/50 px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-secondary-foreground active:scale-[0.98] disabled:opacity-50"
       >
         <Upload className="mr-2 inline h-3.5 w-3.5" />
-        {isUploading ? "Subiendo..." : uploadLabel}
+        {isUploading ? uploadStatusLabel ?? "Subiendo archivo..." : uploadLabel}
       </button>
     </div>
   );

@@ -59,7 +59,36 @@ function isSameDay(left: Date, right: Date) {
   );
 }
 
+function getStartOfWeek(date: Date) {
+  const start = new Date(date);
+  const day = (start.getDay() + 6) % 7;
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - day);
+  return start;
+}
+
+function getEndOfWeek(date: Date) {
+  const end = getStartOfWeek(date);
+  end.setDate(end.getDate() + 7);
+  return end;
+}
+
+function capitalizeLabel(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 const weekDayLabels = ["L", "M", "M", "J", "V", "S", "D"];
+const monthFormatter = new Intl.DateTimeFormat("es-AR", { month: "long" });
+const yearFormatter = new Intl.DateTimeFormat("es-AR", { year: "numeric" });
+const dayFormatter = new Intl.DateTimeFormat("es-AR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+const timeFormatter = new Intl.DateTimeFormat("es-AR", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 const Home = () => {
   const [visibleMonth, setVisibleMonth] = useState(
@@ -81,14 +110,14 @@ const Home = () => {
     });
   }, [visibleMonth]);
 
-  const monthLabel = new Intl.DateTimeFormat("es-AR", {
-    month: "long",
-    year: "numeric",
-  }).format(visibleMonth);
+  const monthLabel = capitalizeLabel(monthFormatter.format(visibleMonth));
+  const yearLabel = yearFormatter.format(visibleMonth);
 
   const calendarDays = getCalendarDays(visibleMonth);
   const weekRows = chunkWeeks(calendarDays, 7);
   const consultations = consultationsQuery.data ?? [];
+  const weekStart = useMemo(() => getStartOfWeek(selectedDate), [selectedDate]);
+  const weekEnd = useMemo(() => getEndOfWeek(selectedDate), [selectedDate]);
 
   const consultationsByDay = useMemo(() => {
     const counts = new Map<string, number>();
@@ -101,6 +130,20 @@ const Home = () => {
     return counts;
   }, [consultations]);
 
+  const selectedWeekConsultations = useMemo(
+    () =>
+      consultations
+        .filter((consultation) => {
+          const consultationDate = new Date(consultation.startsAt);
+          return consultationDate >= weekStart && consultationDate < weekEnd;
+        })
+        .sort(
+          (left, right) =>
+            new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
+        ),
+    [consultations, weekEnd, weekStart],
+  );
+
   const selectedDayConsultations = useMemo(
     () =>
       consultations
@@ -111,6 +154,19 @@ const Home = () => {
         ),
     [consultations, selectedDate],
   );
+
+  const selectedDayConsultationsByTime = useMemo(() => {
+    const groups = new Map<string, typeof selectedDayConsultations>();
+
+    selectedDayConsultations.forEach((consultation) => {
+      const key = timeFormatter.format(new Date(consultation.startsAt));
+      groups.set(key, [...(groups.get(key) ?? []), consultation]);
+    });
+
+    return Array.from(groups.entries());
+  }, [selectedDayConsultations]);
+
+  const selectedDayLabel = capitalizeLabel(dayFormatter.format(selectedDate));
 
   return (
     <AppLayout>
@@ -140,8 +196,9 @@ const Home = () => {
               </button>
 
               <div className="text-center">
-                <h3 className="text-2xl font-semibold capitalize tracking-tight text-card-foreground">
-                  {monthLabel}
+                <h3 className="text-2xl font-semibold tracking-tight text-card-foreground">
+                  <span className="block">{yearLabel}</span>
+                  <span className="mt-0.5 block">{monthLabel}</span>
                 </h3>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Calendario interno del CRM
@@ -185,13 +242,21 @@ const Home = () => {
                       <button
                         key={date.toISOString()}
                         type="button"
-                        onClick={() => setSelectedDate(date)}
+                        onClick={() => {
+                          setSelectedDate(date);
+
+                          if (!isCurrentMonth) {
+                            setVisibleMonth(
+                              new Date(date.getFullYear(), date.getMonth(), 1),
+                            );
+                          }
+                        }}
                         className={cn(
-                          "relative flex h-12 items-center justify-center rounded-full text-base font-medium transition-all",
+                          "relative flex h-12 items-center justify-center rounded-full text-base font-medium transition-all duration-200 hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
                           isCurrentMonth ? "text-foreground" : "text-muted-foreground/55",
                           isToday && "ring-1 ring-primary/35",
                           isSelected &&
-                            "bg-primary text-primary-foreground shadow-[0_10px_24px_rgba(74,134,106,0.28)]",
+                            "bg-primary text-primary-foreground ring-2 ring-primary/15 shadow-[0_10px_24px_rgba(74,134,106,0.28)] hover:bg-primary hover:text-primary-foreground",
                         )}
                       >
                         <span>{date.getDate()}</span>
@@ -219,20 +284,15 @@ const Home = () => {
             <div className="mb-5 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h3 className="text-2xl font-semibold text-card-foreground">
-                  Consultas del dia
+                  Consultas de la semana
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {formatDate(selectedDate.toISOString(), {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  {selectedDayLabel}
                 </p>
               </div>
 
               <div className="rounded-2xl bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-                {selectedDayConsultations.length} consultas
+                {selectedWeekConsultations.length} consultas
               </div>
             </div>
 
@@ -240,43 +300,51 @@ const Home = () => {
               <p className="text-sm text-muted-foreground">Cargando consultas...</p>
             ) : selectedDayConsultations.length === 0 ? (
               <div className="rounded-[24px] bg-muted px-4 py-5 text-sm text-muted-foreground">
-                No hay consultas cargadas para este dia.
+                No hay consultas cargadas para {formatDate(selectedDate.toISOString(), {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                }).toLowerCase()}.
               </div>
             ) : (
               <div className="space-y-3">
-                {selectedDayConsultations.map((consultation) => (
-                  <div
-                    key={consultation.id}
-                    className="flex items-center gap-4 rounded-[26px] border border-border bg-background px-4 py-4"
-                  >
-                    <div className="min-w-[78px] rounded-3xl bg-muted px-3 py-3 text-center">
-                      <p className="text-lg font-semibold text-card-foreground">
-                        {new Intl.DateTimeFormat("es-AR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }).format(new Date(consultation.startsAt))}
-                      </p>
+                {selectedDayConsultationsByTime.map(([time, consultationsAtTime]) => (
+                  <div key={time} className="space-y-2.5">
+                    <div className="flex items-center gap-3 px-1">
+                      <div className="rounded-2xl bg-muted px-3 py-2 text-sm font-semibold text-card-foreground">
+                        {time}
+                      </div>
+                      <div className="h-px flex-1 bg-border" />
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-base font-semibold text-card-foreground">
-                        {consultation.patientName}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Estado: {consultation.status}
-                      </p>
-                    </div>
+                    <div className="space-y-2">
+                      {consultationsAtTime.map((consultation) => (
+                        <div
+                          key={consultation.id}
+                          className="flex items-center gap-4 rounded-[26px] border border-border bg-background px-4 py-4"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-base font-semibold text-card-foreground">
+                              {consultation.patientName}
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Estado: {consultation.status}
+                            </p>
+                          </div>
 
-                    <span
-                      className={cn(
-                        "inline-block h-2.5 w-2.5 rounded-full",
-                        consultation.status === "completed"
-                          ? "bg-success"
-                          : consultation.status === "scheduled"
-                            ? "bg-primary"
-                            : "bg-muted-foreground/40",
-                      )}
-                    />
+                          <span
+                            className={cn(
+                              "inline-block h-2.5 w-2.5 rounded-full",
+                              consultation.status === "completed"
+                                ? "bg-success"
+                                : consultation.status === "scheduled"
+                                  ? "bg-primary"
+                                  : "bg-muted-foreground/40",
+                            )}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
