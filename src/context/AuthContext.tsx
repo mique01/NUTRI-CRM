@@ -11,14 +11,12 @@ import type { Session } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import {
   clearDeniedAccessMessage,
-  getDefaultDeniedAccessMessage,
   mapAuthUser,
   persistDeniedAccessMessage,
-  signInWithGoogle,
+  signInWithAuthorizedEmail,
   signOut,
   syncCurrentProfile,
 } from "@/services/auth";
-import { submitAccessRequest } from "@/services/accessRequests";
 import {
   acceptMyClinicInvite,
   getCurrentClinicMembership,
@@ -36,7 +34,7 @@ interface AuthContextType {
   accessState: AccessState | null;
   loading: boolean;
   isConfigured: boolean;
-  loginWithGoogle: () => Promise<void>;
+  loginWithEmail: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshContext: () => Promise<void>;
 }
@@ -160,21 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (nextState.session?.user && nextState.accessStatus === "denied") {
-      try {
-        const requestResult = await submitAccessRequest(currentSession);
-
-        if (requestResult.status === "approved" || requestResult.status === "member") {
-          clearDeniedAccessMessage();
-          return await loadAuthContext(currentSession);
-        }
-
-        persistDeniedAccessMessage(requestResult.message);
-      } catch (error) {
-        persistDeniedAccessMessage(
-          error instanceof Error ? error.message : getDefaultDeniedAccessMessage(),
-        );
-      }
-
+      persistDeniedAccessMessage();
       await signOut();
       return emptyAuthState;
     }
@@ -235,7 +219,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       accessState,
       loading,
       isConfigured: isSupabaseConfigured,
-      loginWithGoogle: signInWithGoogle,
+      loginWithEmail: signInWithAuthorizedEmail,
       logout: signOut,
       refreshContext,
     }),

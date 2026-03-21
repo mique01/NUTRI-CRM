@@ -11,18 +11,19 @@ const AuthCallback = () => {
   useEffect(() => {
     const finalizeAuth = async () => {
       try {
-        const hasCode = new URL(window.location.href).searchParams.get("code");
-        if (!hasCode) {
-          navigate("/login", { replace: true });
-          return;
+        const currentUrl = window.location.href;
+        const url = new URL(currentUrl);
+        const hasCode = url.searchParams.get("code");
+
+        if (hasCode) {
+          await exchangeCodeForSession(currentUrl);
         }
 
-        await exchangeCodeForSession(window.location.href);
         await refreshContext();
         navigate(getDeniedAccessMessage() ? "/login" : "/", { replace: true });
       } catch (error) {
         setErrorMessage(
-          error instanceof Error ? error.message : "No se pudo completar el login.",
+          error instanceof Error ? error.message : "No se pudo completar el ingreso.",
         );
         window.setTimeout(() => navigate("/login", { replace: true }), 1800);
       }
@@ -34,9 +35,9 @@ const AuthCallback = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-card">
-        <h1 className="text-xl font-bold text-foreground">Conectando tu sesión</h1>
+        <h1 className="text-xl font-bold text-foreground">Validando tu acceso</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Estamos terminando el acceso con Google y validando tu invitación.
+          Estamos confirmando el enlace del email y preparando tu sesion.
         </p>
         {errorMessage ? (
           <p className="mt-4 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">

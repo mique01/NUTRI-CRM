@@ -5,7 +5,7 @@ import type { AuthUser } from "@/types/domain";
 
 const ACCESS_DENIED_STORAGE_KEY = "nutricrm.accessDeniedMessage";
 const DEFAULT_DENIED_MESSAGE =
-  "Lo lamento, no estas habilitado para ingresar todavia. Ya avisamos al administrador.";
+  "Solo pueden ingresar los emails autorizados e invitados desde Supabase.";
 
 function mapUser(user: User): AuthUser {
   const fullName =
@@ -22,15 +22,22 @@ function mapUser(user: User): AuthUser {
   };
 }
 
-export async function signInWithGoogle() {
+export async function signInWithAuthorizedEmail(email: string) {
   assertSupabaseConfigured();
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    throw new Error("Ingresa un email autorizado.");
+  }
 
   const redirectUrl = new URL("/auth/callback", window.location.origin);
 
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
+  const { error } = await supabase.auth.signInWithOtp({
+    email: normalizedEmail,
     options: {
-      redirectTo: redirectUrl.toString(),
+      emailRedirectTo: redirectUrl.toString(),
+      shouldCreateUser: false,
     },
   });
 

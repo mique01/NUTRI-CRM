@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Chrome } from "lucide-react";
+import { Mail } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -9,8 +9,10 @@ import {
 } from "@/services/auth";
 
 const Login = () => {
-  const { accessStatus, isConfigured, loginWithGoogle, logout, user } = useAuth();
+  const { accessStatus, isConfigured, loginWithEmail, logout, user } = useAuth();
+  const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [linkSent, setLinkSent] = useState(false);
   const [deniedMessage, setDeniedMessage] = useState<string | null>(() => getDeniedAccessMessage());
 
   useEffect(() => {
@@ -22,12 +24,20 @@ const Login = () => {
 
     clearDeniedAccessMessage();
     setDeniedMessage(null);
+    setLinkSent(false);
     setIsSubmitting(true);
 
     try {
-      await loginWithGoogle();
+      await loginWithEmail(email);
+      setLinkSent(true);
+      toast.success("Si el email esta habilitado, te enviamos un enlace para ingresar.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo iniciar sesion.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No se pudo enviar el acceso por email autorizado.",
+      );
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -44,8 +54,8 @@ const Login = () => {
           </div>
           <h1 className="text-2xl font-bold text-foreground">Bienvenida a NutriCRM</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Inicia sesion con Google. Si tu cuenta todavia no tiene acceso, le vamos a avisar al
-            administrador para que la apruebe.
+            Ingresa con un email autorizado. Solo pueden entrar las cuentas que hayas invitado
+            previamente desde Supabase.
           </p>
         </div>
 
@@ -56,7 +66,7 @@ const Login = () => {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              Cuando el administrador habilite tu cuenta, vas a poder volver a ingresar con Google.
+              Pedi la invitacion desde Supabase y luego vuelve a ingresar con ese mismo email.
             </p>
 
             {user ? (
@@ -67,28 +77,49 @@ const Login = () => {
               >
                 Cerrar sesion
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleLogin}
-                disabled={isSubmitting || !isConfigured}
-                className="flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-card transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Chrome className="h-4 w-4" />
-                {isSubmitting ? "Redirigiendo..." : "Volver a intentar con Google"}
-              </button>
-            )}
+            ) : null}
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={handleLogin}
-            disabled={isSubmitting || !isConfigured}
-            className="flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-card transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Chrome className="h-4 w-4" />
-            {isSubmitting ? "Redirigiendo..." : "Continuar con Google"}
-          </button>
+          <div className="space-y-4">
+            <div>
+              <label
+                htmlFor="authorized-email"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Email autorizado
+              </label>
+              <input
+                id="authorized-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="tu-email@dominio.com"
+                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/40"
+              />
+            </div>
+
+            {linkSent ? (
+              <div className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">
+                Revisa tu email. Si la cuenta esta habilitada, vas a recibir un enlace para entrar
+                al CRM.
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={handleLogin}
+              disabled={isSubmitting || !isConfigured || !email.trim()}
+              className="flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-card transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Mail className="h-4 w-4" />
+              {isSubmitting ? "Enviando enlace..." : "Ingresar con email autorizado"}
+            </button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              Una vez dentro del CRM vas a poder conectar Google para integrar Calendar.
+            </p>
+          </div>
         )}
 
         {!isConfigured ? (
