@@ -758,6 +758,9 @@ begin
 end;
 $$;
 
+grant execute on function public.try_accept_supabase_auth_invite() to anon, authenticated, service_role;
+notify pgrst, 'reload schema';
+
 alter table public.profiles enable row level security;
 alter table public.clinics enable row level security;
 alter table public.clinic_memberships enable row level security;

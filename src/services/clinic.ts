@@ -129,6 +129,10 @@ export async function tryAcceptSupabaseAuthInvite() {
   const { data, error } = await supabase.rpc("try_accept_supabase_auth_invite");
 
   if (error) {
+    if (error.code === "PGRST202") {
+      return null;
+    }
+
     throw error;
   }
 
