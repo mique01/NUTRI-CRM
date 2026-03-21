@@ -3,6 +3,8 @@ import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { getDisplayName } from "@/lib/utils";
 import type { AuthUser } from "@/types/domain";
 
+const ACCESS_DENIED_STORAGE_KEY = "nutricrm.accessDeniedMessage";
+
 function mapUser(user: User): AuthUser {
   const fullName =
     user.user_metadata?.full_name ??
@@ -80,4 +82,25 @@ export async function syncCurrentProfile(user: User) {
 
 export function mapAuthUser(user: User | null) {
   return user ? mapUser(user) : null;
+}
+
+export function persistDeniedAccessMessage() {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(
+    ACCESS_DENIED_STORAGE_KEY,
+    "Lo lamento, no estás habilitado para ingresar.",
+  );
+}
+
+export function getDeniedAccessMessage() {
+  if (typeof window === "undefined") return null;
+
+  return window.localStorage.getItem(ACCESS_DENIED_STORAGE_KEY);
+}
+
+export function clearDeniedAccessMessage() {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.removeItem(ACCESS_DENIED_STORAGE_KEY);
 }

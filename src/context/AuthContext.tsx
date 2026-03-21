@@ -9,7 +9,14 @@ import {
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
-import { mapAuthUser, signInWithGoogle, signOut, syncCurrentProfile } from "@/services/auth";
+import {
+  clearDeniedAccessMessage,
+  mapAuthUser,
+  persistDeniedAccessMessage,
+  signInWithGoogle,
+  signOut,
+  syncCurrentProfile,
+} from "@/services/auth";
 import {
   acceptMyClinicInvite,
   getCurrentClinicMembership,
@@ -35,16 +42,18 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const useAuth = () => useContext(AuthContext);
 
+const emptyAuthState = {
+  session: null,
+  user: null,
+  clinic: null,
+  membership: null,
+  accessStatus: "denied" as const,
+  accessState: null,
+};
+
 async function loadAuthContext(session: Session | null) {
   if (!session?.user) {
-    return {
-      session: null,
-      user: null,
-      clinic: null,
-      membership: null,
-      accessStatus: "denied" as const,
-      accessState: null,
-    };
+    return emptyAuthState;
   }
 
   await syncCurrentProfile(session.user);
@@ -98,6 +107,8 @@ async function loadAuthContext(session: Session | null) {
   };
 }
 
+type ResolvedAuthState = Awaited<ReturnType<typeof loadAuthContext>>;
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -107,15 +118,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [accessState, setAccessState] = useState<AccessState | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const applyState = (nextState: ResolvedAuthState) => {
+    setSession(nextState.session);
+    setUser(nextState.user);
+    setClinic(nextState.clinic);
+    setMembership(nextState.membership);
+    setAccessStatus(nextState.accessStatus);
+    setAccessState(nextState.accessState);
+  };
+
+  const resolveSessionState = async (currentSession: Session | null) => {
+    const nextState = await loadAuthContext(currentSession);
+
+    if (!currentSession?.user) {
+      return nextState;
+    }
+
+    if (nextState.session?.user && nextState.accessStatus === "denied") {
+      persistDeniedAccessMessage();
+      await signOut();
+      return emptyAuthState;
+    }
+
+    clearDeniedAccessMessage();
+    return nextState;
+  };
+
   const refreshContext = async () => {
     if (!isSupabaseConfigured) {
       setLoading(false);
-      setSession(null);
-      setUser(null);
-      setClinic(null);
-      setMembership(null);
-      setAccessStatus("denied");
-      setAccessState(null);
+      applyState(emptyAuthState);
       return;
     }
 
@@ -124,13 +156,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       data: { session: currentSession },
     } = await supabase.auth.getSession();
 
-    const nextState = await loadAuthContext(currentSession);
-    setSession(nextState.session);
-    setUser(nextState.user);
-    setClinic(nextState.clinic);
-    setMembership(nextState.membership);
-    setAccessStatus(nextState.accessStatus);
-    setAccessState(nextState.accessState);
+    const nextState = await resolveSessionState(currentSession);
+    applyState(nextState);
     setLoading(false);
   };
 
@@ -146,14 +173,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       startTransition(() => {
-        void loadAuthContext(nextSession)
+        void resolveSessionState(nextSession)
           .then((nextState) => {
-            setSession(nextState.session);
-            setUser(nextState.user);
-            setClinic(nextState.clinic);
-            setMembership(nextState.membership);
-            setAccessStatus(nextState.accessStatus);
-            setAccessState(nextState.accessState);
+            applyState(nextState);
           })
           .finally(() => setLoading(false));
       });

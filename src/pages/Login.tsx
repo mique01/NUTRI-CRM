@@ -1,24 +1,37 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Chrome } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import {
+  clearDeniedAccessMessage,
+  getDeniedAccessMessage,
+} from "@/services/auth";
 
 const Login = () => {
-  const { accessState, accessStatus, isConfigured, loginWithGoogle, logout, user } = useAuth();
+  const { accessStatus, isConfigured, loginWithGoogle, logout, user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deniedMessage, setDeniedMessage] = useState<string | null>(() => getDeniedAccessMessage());
+
+  useEffect(() => {
+    setDeniedMessage(getDeniedAccessMessage());
+  }, [accessStatus, user]);
 
   const handleLogin = async () => {
     if (!isConfigured) return;
 
+    clearDeniedAccessMessage();
+    setDeniedMessage(null);
     setIsSubmitting(true);
 
     try {
       await loginWithGoogle();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No se pudo iniciar sesiÃ³n.");
+      toast.error(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
       setIsSubmitting(false);
     }
   };
+
+  const showDeniedState = Boolean(deniedMessage) || (user && accessStatus === "denied");
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -29,29 +42,29 @@ const Login = () => {
           </div>
           <h1 className="text-2xl font-bold text-foreground">Bienvenida a NutriCRM</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            IniciÃ¡ sesiÃ³n con Google usando un email habilitado previamente desde Supabase.
+            Iniciá sesión con Google usando un email habilitado previamente desde Supabase.
           </p>
         </div>
 
-        {user && accessStatus === "denied" ? (
+        {showDeniedState ? (
           <div className="space-y-4">
             <div className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {accessState?.clinicName
-                ? `La cuenta ${user.email} no tiene acceso vigente al consultorio ${accessState.clinicName}.`
-                : `La cuenta ${user.email} no fue invitada al CRM.`}
+              Lo lamento, no estás habilitado para ingresar.
             </div>
 
             <p className="text-sm text-muted-foreground">
-              InvitÃ¡ este email desde Supabase y luego volvÃ© a iniciar sesiÃ³n.
+              Solo pueden acceder los usuarios habilitados desde Supabase.
             </p>
 
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition-all hover:bg-accent"
-            >
-              Cerrar sesiÃ³n
-            </button>
+            {user ? (
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition-all hover:bg-accent"
+              >
+                Cerrar sesión
+              </button>
+            ) : null}
           </div>
         ) : (
           <button

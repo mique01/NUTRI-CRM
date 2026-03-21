@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { exchangeCodeForSession } from "@/services/auth";
+import { exchangeCodeForSession, getDeniedAccessMessage } from "@/services/auth";
 
 const AuthCallback = () => {
   const { refreshContext } = useAuth();
@@ -19,7 +19,7 @@ const AuthCallback = () => {
 
         await exchangeCodeForSession(window.location.href);
         await refreshContext();
-        navigate("/", { replace: true });
+        navigate(getDeniedAccessMessage() ? "/login" : "/", { replace: true });
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "No se pudo completar el login.",
@@ -34,9 +34,9 @@ const AuthCallback = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-card">
-        <h1 className="text-xl font-bold text-foreground">Conectando tu sesiÃ³n</h1>
+        <h1 className="text-xl font-bold text-foreground">Conectando tu sesión</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Estamos terminando el acceso con Google y validando tu invitaciÃ³n.
+          Estamos terminando el acceso con Google y validando tu invitación.
         </p>
         {errorMessage ? (
           <p className="mt-4 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
