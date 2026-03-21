@@ -163,6 +163,15 @@ export interface MedicalStudy {
   createdAt: string;
 }
 
+export interface PatientDetailBundle {
+  patient: Patient;
+  history: ClinicalHistory;
+  notes: PatientNote[];
+  appointments: Appointment[];
+  nutritionPlans: NutritionPlan[];
+  medicalStudies: MedicalStudy[];
+}
+
 export interface InviteRecord {
   id: string;
   clinicId: string;

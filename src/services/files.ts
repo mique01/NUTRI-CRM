@@ -4,6 +4,10 @@ import type { MedicalStudy, NutritionPlan, StudyFileType } from "@/types/domain"
 
 const NUTRITION_PLANS_BUCKET = "nutrition-plans";
 const MEDICAL_STUDIES_BUCKET = "medical-studies";
+const NUTRITION_PLAN_SELECT =
+  "id, clinic_id, patient_id, title, effective_date, storage_path, file_name, mime_type, size_bytes, created_at";
+const MEDICAL_STUDY_SELECT =
+  "id, clinic_id, patient_id, title, study_date, file_type, storage_path, file_name, mime_type, size_bytes, created_at";
 
 type UploadStatusHandler = (status: string | null) => void;
 
@@ -138,7 +142,7 @@ export async function listNutritionPlans(patientId: string) {
 
   const { data, error } = await supabase
     .from("nutrition_plans")
-    .select("*")
+    .select(NUTRITION_PLAN_SELECT)
     .eq("patient_id", patientId)
     .order("effective_date", { ascending: false });
 
@@ -182,7 +186,7 @@ export async function uploadNutritionPlan(
       size_bytes: finalFile.size,
       uploaded_by: profileId,
     })
-    .select("*")
+    .select(NUTRITION_PLAN_SELECT)
     .single();
 
   if (error) {
@@ -224,7 +228,7 @@ export async function listMedicalStudies(patientId: string) {
 
   const { data, error } = await supabase
     .from("medical_studies")
-    .select("*")
+    .select(MEDICAL_STUDY_SELECT)
     .eq("patient_id", patientId)
     .order("study_date", { ascending: false });
 
@@ -269,7 +273,7 @@ export async function uploadMedicalStudy(
       size_bytes: finalFile.size,
       uploaded_by: profileId,
     })
-    .select("*")
+    .select(MEDICAL_STUDY_SELECT)
     .single();
 
   if (error) {

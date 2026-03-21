@@ -3,6 +3,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { listDashboardConsultations, listPatientAppointments } from "@/services/appointments";
 import { getClinicalHistory } from "@/services/clinicalHistory";
 import { listMedicalStudies, listNutritionPlans } from "@/services/files";
+import { getPatientDetailBundle } from "@/services/patientDetail";
 import { getPatientById, listPatients } from "@/services/patients";
 import { listPatientNotes } from "@/services/notes";
 
@@ -26,6 +27,14 @@ export function usePatientQuery(patientId?: string) {
   return useQuery({
     queryKey: patientId ? queryKeys.patient(patientId) : ["patients", "missing-id"],
     queryFn: () => getPatientById(patientId as string),
+    enabled: Boolean(patientId),
+  });
+}
+
+export function usePatientDetailQuery(patientId?: string) {
+  return useQuery({
+    queryKey: patientId ? queryKeys.patientDetail(patientId) : ["patients", "missing-id", "detail"],
+    queryFn: () => getPatientDetailBundle(patientId as string),
     enabled: Boolean(patientId),
   });
 }

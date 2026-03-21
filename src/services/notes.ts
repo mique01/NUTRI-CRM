@@ -1,6 +1,9 @@
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import type { PatientNote } from "@/types/domain";
 
+const PATIENT_NOTE_SELECT =
+  "id, clinic_id, patient_id, author_profile_id, content, created_at";
+
 function mapPatientNote(row: any): PatientNote {
   return {
     id: row.id,
@@ -17,7 +20,7 @@ export async function listPatientNotes(patientId: string) {
 
   const { data, error } = await supabase
     .from("patient_notes")
-    .select("*")
+    .select(PATIENT_NOTE_SELECT)
     .eq("patient_id", patientId)
     .order("created_at", { ascending: false });
 
@@ -44,7 +47,7 @@ export async function createPatientNote(
       author_profile_id: profileId,
       content: content.trim(),
     })
-    .select("*")
+    .select(PATIENT_NOTE_SELECT)
     .single();
 
   if (error) {

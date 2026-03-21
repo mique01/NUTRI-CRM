@@ -216,6 +216,13 @@ create index if not exists patients_clinic_id_idx on public.patients (clinic_id)
 create index if not exists patient_notes_patient_id_idx on public.patient_notes (patient_id, created_at desc);
 create index if not exists appointments_patient_id_idx on public.appointments (patient_id, starts_at asc);
 create index if not exists appointments_nutritionist_id_idx on public.appointments (nutritionist_profile_id, starts_at asc);
+create index if not exists appointments_clinic_id_starts_at_idx on public.appointments (clinic_id, starts_at asc);
+create index if not exists appointments_patient_scheduled_starts_at_idx
+  on public.appointments (patient_id, starts_at asc)
+  where status = 'scheduled';
+create index if not exists appointments_patient_non_cancelled_starts_at_idx
+  on public.appointments (patient_id, starts_at desc)
+  where status <> 'cancelled';
 create index if not exists nutrition_plans_patient_id_idx on public.nutrition_plans (patient_id, effective_date desc);
 create index if not exists medical_studies_patient_id_idx on public.medical_studies (patient_id, study_date desc);
 
@@ -403,6 +410,272 @@ as $$
       and profile_id = auth.uid()
       and role = 'admin'
   );
+$$;
+
+create or replace function public.list_patients_overview()
+returns table (
+  id uuid,
+  clinic_id uuid,
+  first_name text,
+  last_name text,
+  birth_date date,
+  profession text,
+  email text,
+  phone text,
+  alerts text,
+  status public.patient_status,
+  created_at timestamptz,
+  updated_at timestamptz,
+  next_appointment_at timestamptz,
+  last_appointment_at timestamptz
+)
+language sql
+stable
+set search_path = public, app
+as $$
+  select
+    patients.id,
+    patients.clinic_id,
+    patients.first_name,
+    patients.last_name,
+    patients.birth_date,
+    patients.profession,
+    patients.email,
+    patients.phone,
+    coalesce(patients.alerts, '') as alerts,
+    patients.status,
+    patients.created_at,
+    patients.updated_at,
+    next_appointment.starts_at as next_appointment_at,
+    last_appointment.starts_at as last_appointment_at
+  from public.patients
+  left join lateral (
+    select appointments.starts_at
+    from public.appointments
+    where appointments.patient_id = patients.id
+      and appointments.status = 'scheduled'
+      and appointments.starts_at >= timezone('utc', now())
+    order by appointments.starts_at asc
+    limit 1
+  ) as next_appointment on true
+  left join lateral (
+    select appointments.starts_at
+    from public.appointments
+    where appointments.patient_id = patients.id
+      and appointments.status <> 'cancelled'
+    order by appointments.starts_at desc
+    limit 1
+  ) as last_appointment on true
+  where patients.clinic_id = app.current_clinic_id()
+  order by patients.created_at desc;
+$$;
+
+create or replace function public.list_dashboard_consultations(
+  month_start timestamptz,
+  month_end timestamptz
+)
+returns table (
+  id uuid,
+  patient_id uuid,
+  patient_name text,
+  starts_at timestamptz,
+  status public.appointment_status
+)
+language sql
+stable
+set search_path = public, app
+as $$
+  select
+    appointments.id,
+    appointments.patient_id,
+    trim(concat(patients.first_name, ' ', patients.last_name)) as patient_name,
+    appointments.starts_at,
+    appointments.status
+  from public.appointments
+  join public.patients on patients.id = appointments.patient_id
+  where appointments.clinic_id = app.current_clinic_id()
+    and appointments.starts_at >= month_start
+    and appointments.starts_at < month_end
+  order by appointments.starts_at asc;
+$$;
+
+create or replace function public.get_patient_detail_bundle(target_patient_id uuid)
+returns jsonb
+language plpgsql
+stable
+set search_path = public, app
+as $$
+declare
+  payload jsonb;
+begin
+  if auth.uid() is null then
+    raise exception 'Debes iniciar sesion.';
+  end if;
+
+  select jsonb_build_object(
+    'patient',
+    to_jsonb(patient_row),
+    'history',
+    coalesce(
+      (
+        select to_jsonb(history_row)
+        from (
+          select
+            patient_clinical_histories.patient_id,
+            patient_clinical_histories.consultation_reason,
+            patient_clinical_histories.objective,
+            patient_clinical_histories.pathologies_history_surgeries,
+            patient_clinical_histories.medications_supplements,
+            patient_clinical_histories.eating_habits,
+            patient_clinical_histories.allergies_intolerances,
+            patient_clinical_histories.physical_activity,
+            patient_clinical_histories.stress,
+            patient_clinical_histories.sleep,
+            patient_clinical_histories.digestive_system,
+            patient_clinical_histories.menstrual_cycles,
+            patient_clinical_histories.other_observations,
+            patient_clinical_histories.updated_at
+          from public.patient_clinical_histories
+          where patient_clinical_histories.patient_id = patient_row.id
+          limit 1
+        ) as history_row
+      ),
+      'null'::jsonb
+    ),
+    'notes',
+    coalesce(
+      (
+        select jsonb_agg(to_jsonb(note_row) order by note_row.created_at desc)
+        from (
+          select
+            patient_notes.id,
+            patient_notes.clinic_id,
+            patient_notes.patient_id,
+            patient_notes.author_profile_id,
+            patient_notes.content,
+            patient_notes.created_at
+          from public.patient_notes
+          where patient_notes.patient_id = patient_row.id
+          order by patient_notes.created_at desc
+        ) as note_row
+      ),
+      '[]'::jsonb
+    ),
+    'appointments',
+    coalesce(
+      (
+        select jsonb_agg(to_jsonb(appointment_row) order by appointment_row.starts_at asc)
+        from (
+          select
+            appointments.id,
+            appointments.clinic_id,
+            appointments.patient_id,
+            appointments.nutritionist_profile_id,
+            appointments.starts_at,
+            appointments.ends_at,
+            appointments.appointment_type,
+            appointments.notes,
+            appointments.status,
+            appointments.external_provider,
+            appointments.external_event_id,
+            appointments.sync_state
+          from public.appointments
+          where appointments.patient_id = patient_row.id
+          order by appointments.starts_at asc
+        ) as appointment_row
+      ),
+      '[]'::jsonb
+    ),
+    'nutrition_plans',
+    coalesce(
+      (
+        select jsonb_agg(to_jsonb(plan_row) order by plan_row.effective_date desc)
+        from (
+          select
+            nutrition_plans.id,
+            nutrition_plans.clinic_id,
+            nutrition_plans.patient_id,
+            nutrition_plans.title,
+            nutrition_plans.effective_date,
+            nutrition_plans.storage_path,
+            nutrition_plans.file_name,
+            nutrition_plans.mime_type,
+            nutrition_plans.size_bytes,
+            nutrition_plans.created_at
+          from public.nutrition_plans
+          where nutrition_plans.patient_id = patient_row.id
+          order by nutrition_plans.effective_date desc
+        ) as plan_row
+      ),
+      '[]'::jsonb
+    ),
+    'medical_studies',
+    coalesce(
+      (
+        select jsonb_agg(to_jsonb(study_row) order by study_row.study_date desc)
+        from (
+          select
+            medical_studies.id,
+            medical_studies.clinic_id,
+            medical_studies.patient_id,
+            medical_studies.title,
+            medical_studies.study_date,
+            medical_studies.file_type,
+            medical_studies.storage_path,
+            medical_studies.file_name,
+            medical_studies.mime_type,
+            medical_studies.size_bytes,
+            medical_studies.created_at
+          from public.medical_studies
+          where medical_studies.patient_id = patient_row.id
+          order by medical_studies.study_date desc
+        ) as study_row
+      ),
+      '[]'::jsonb
+    )
+  )
+  into payload
+  from (
+    select
+      patients.id,
+      patients.clinic_id,
+      patients.first_name,
+      patients.last_name,
+      patients.birth_date,
+      patients.profession,
+      patients.email,
+      patients.phone,
+      coalesce(patients.alerts, '') as alerts,
+      patients.status,
+      patients.created_at,
+      patients.updated_at,
+      next_appointment.starts_at as next_appointment_at,
+      last_appointment.starts_at as last_appointment_at
+    from public.patients
+    left join lateral (
+      select appointments.starts_at
+      from public.appointments
+      where appointments.patient_id = patients.id
+        and appointments.status = 'scheduled'
+        and appointments.starts_at >= timezone('utc', now())
+      order by appointments.starts_at asc
+      limit 1
+    ) as next_appointment on true
+    left join lateral (
+      select appointments.starts_at
+      from public.appointments
+      where appointments.patient_id = patients.id
+        and appointments.status <> 'cancelled'
+      order by appointments.starts_at desc
+      limit 1
+    ) as last_appointment on true
+    where patients.id = target_patient_id
+      and patients.clinic_id = app.current_clinic_id()
+    limit 1
+  ) as patient_row;
+
+  return payload;
+end;
 $$;
 
 create or replace function public.bootstrap_clinic(clinic_name text)
@@ -789,6 +1062,9 @@ end;
 $$;
 
 grant execute on function public.try_accept_supabase_auth_invite() to anon, authenticated, service_role;
+grant execute on function public.list_patients_overview() to authenticated, service_role;
+grant execute on function public.list_dashboard_consultations(timestamptz, timestamptz) to authenticated, service_role;
+grant execute on function public.get_patient_detail_bundle(uuid) to authenticated, service_role;
 notify pgrst, 'reload schema';
 
 alter table public.profiles enable row level security;

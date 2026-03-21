@@ -5,8 +5,6 @@ import type { Patient, PatientFormValues } from "@/types/domain";
 const PATIENT_BASE_SELECT =
   "id, clinic_id, first_name, last_name, birth_date, profession, email, phone, status, created_at, updated_at";
 const PATIENT_WITH_ALERTS_SELECT = `${PATIENT_BASE_SELECT}, alerts`;
-const PATIENT_WITH_APPOINTMENTS_SELECT = `${PATIENT_WITH_ALERTS_SELECT}, appointments(starts_at, status)`;
-const PATIENT_BASE_WITH_APPOINTMENTS_SELECT = `${PATIENT_BASE_SELECT}, appointments(starts_at, status)`;
 
 function getNextAppointment(appointments: Array<{ starts_at: string; status: string }> = []) {
   const now = new Date();
@@ -50,16 +48,20 @@ function isMissingAlertsColumn(error: unknown) {
 }
 
 async function selectPatientsList(withAlerts: boolean) {
-  return supabase
-    .from("patients")
-    .select(withAlerts ? PATIENT_WITH_APPOINTMENTS_SELECT : PATIENT_BASE_WITH_APPOINTMENTS_SELECT)
-    .order("created_at", { ascending: false });
+  if (!withAlerts) {
+    return supabase
+      .from("patients")
+      .select(PATIENT_BASE_SELECT)
+      .order("created_at", { ascending: false });
+  }
+
+  return supabase.rpc("list_patients_overview");
 }
 
 async function selectPatientById(patientId: string, withAlerts: boolean) {
   return supabase
     .from("patients")
-    .select(withAlerts ? PATIENT_WITH_APPOINTMENTS_SELECT : PATIENT_BASE_WITH_APPOINTMENTS_SELECT)
+    .select(withAlerts ? PATIENT_WITH_ALERTS_SELECT : PATIENT_BASE_SELECT)
     .eq("id", patientId)
     .maybeSingle();
 }
@@ -108,8 +110,10 @@ function mapPatient(row: any): Patient {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     alerts: normalizeAlerts(row.alerts),
-    nextAppointmentAt: row.nextAppointmentAt ?? getNextAppointment(row.appointments),
-    lastAppointmentAt: row.lastAppointmentAt ?? getLastAppointment(row.appointments),
+    nextAppointmentAt:
+      row.nextAppointmentAt ?? row.next_appointment_at ?? getNextAppointment(row.appointments),
+    lastAppointmentAt:
+      row.lastAppointmentAt ?? row.last_appointment_at ?? getLastAppointment(row.appointments),
   };
 }
 

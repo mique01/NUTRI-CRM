@@ -21,12 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/context/AuthContext";
 import {
-  useClinicalHistoryQuery,
-  useMedicalStudiesQuery,
-  useNutritionPlansQuery,
-  usePatientAppointmentsQuery,
-  usePatientNotesQuery,
-  usePatientQuery,
+  usePatientDetailQuery,
 } from "@/hooks/use-crm-data";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate, formatDateTime, getInitials } from "@/lib/utils";
@@ -52,17 +47,14 @@ const PatientDetail = () => {
   const [planUploadStatus, setPlanUploadStatus] = useState<string | null>(null);
   const [studyUploadStatus, setStudyUploadStatus] = useState<string | null>(null);
 
-  const patientQuery = usePatientQuery(id);
-  const historyQuery = useClinicalHistoryQuery(id);
-  const notesQuery = usePatientNotesQuery(id);
-  const appointmentsQuery = usePatientAppointmentsQuery(id);
-  const plansQuery = useNutritionPlansQuery(id);
-  const studiesQuery = useMedicalStudiesQuery(id);
+  const patientDetailQuery = usePatientDetailQuery(id);
 
-  const patient = patientQuery.data;
-  const plans = plansQuery.data ?? [];
-  const studies = studiesQuery.data ?? [];
-  const appointments = appointmentsQuery.data ?? [];
+  const patient = patientDetailQuery.data?.patient ?? null;
+  const history = patientDetailQuery.data?.history;
+  const notes = patientDetailQuery.data?.notes ?? [];
+  const appointments = patientDetailQuery.data?.appointments ?? [];
+  const plans = patientDetailQuery.data?.nutritionPlans ?? [];
+  const studies = patientDetailQuery.data?.medicalStudies ?? [];
   const now = Date.now();
   const lastAppointment =
     [...appointments]
@@ -79,11 +71,7 @@ const PatientDetail = () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.patients }),
       queryClient.invalidateQueries({ queryKey: queryKeys.patient(id) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.patientHistory(id) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.patientNotes(id) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.patientAppointments(id) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.patientPlans(id) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.patientStudies(id) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id) }),
     ]);
   };
 
@@ -119,7 +107,7 @@ const PatientDetail = () => {
     mutationFn: (values: ClinicalHistoryFormValues) =>
       saveClinicalHistory(id!, user!.id, values),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientHistory(id!) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
       toast.success("Historia clinica guardada.");
     },
     onError: (error) => {
@@ -132,7 +120,7 @@ const PatientDetail = () => {
   const createNoteMutation = useMutation({
     mutationFn: (content: string) => createPatientNote(clinic!.id, id!, user!.id, content),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientNotes(id!) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
       toast.success("Nota guardada.");
     },
     onError: (error) => {
@@ -143,7 +131,7 @@ const PatientDetail = () => {
   const deleteNoteMutation = useMutation({
     mutationFn: (noteId: string) => deletePatientNote(noteId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientNotes(id!) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
       toast.success("Nota eliminada.");
     },
     onError: (error) => {
@@ -155,7 +143,7 @@ const PatientDetail = () => {
     mutationFn: (file: File) =>
       uploadNutritionPlan(clinic!.id, id!, user!.id, file, setPlanUploadStatus),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientPlans(id!) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
       toast.success("Plan alimenticio subido.");
     },
     onError: (error) => {
@@ -173,7 +161,7 @@ const PatientDetail = () => {
       return deleteNutritionPlan(planId, currentPlan.storagePath);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientPlans(id!) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
       toast.success("Plan alimenticio eliminado.");
     },
     onError: (error) => {
@@ -185,7 +173,7 @@ const PatientDetail = () => {
     mutationFn: (file: File) =>
       uploadMedicalStudy(clinic!.id, id!, user!.id, file, setStudyUploadStatus),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientStudies(id!) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
       toast.success("Estudio medico subido.");
     },
     onError: (error) => {
@@ -203,7 +191,7 @@ const PatientDetail = () => {
       return deleteMedicalStudy(studyId, currentStudy.storagePath);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientStudies(id!) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
       toast.success("Estudio medico eliminado.");
     },
     onError: (error) => {
@@ -225,13 +213,7 @@ const PatientDetail = () => {
     };
   }, [patient]);
 
-  const isLoading =
-    patientQuery.isLoading ||
-    historyQuery.isLoading ||
-    notesQuery.isLoading ||
-    appointmentsQuery.isLoading ||
-    plansQuery.isLoading ||
-    studiesQuery.isLoading;
+  const isLoading = patientDetailQuery.isLoading;
 
   const handleDownloadPlan = async (itemId: string) => {
     const currentPlan = plans.find((plan) => plan.id === itemId);
@@ -254,6 +236,20 @@ const PatientDetail = () => {
       <AppLayout>
         <div className="px-4 py-10 text-sm text-muted-foreground md:px-8">
           Cargando paciente...
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (patientDetailQuery.isError) {
+    return (
+      <AppLayout>
+        <div className="px-4 py-12 text-center text-destructive md:px-8">
+          <p className="text-sm">
+            {patientDetailQuery.error instanceof Error
+              ? patientDetailQuery.error.message
+              : "No se pudo cargar la ficha del paciente."}
+          </p>
         </div>
       </AppLayout>
     );
@@ -434,7 +430,7 @@ const PatientDetail = () => {
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_360px]">
           <div className="space-y-6">
             <ClinicalHistorySection
-              history={historyQuery.data}
+              history={history}
               isSaving={saveHistoryMutation.isPending}
               onSave={saveHistoryMutation.mutateAsync}
             />
@@ -478,7 +474,7 @@ const PatientDetail = () => {
             />
 
             <NotesSection
-              notes={notesQuery.data ?? []}
+              notes={notes}
               isSaving={createNoteMutation.isPending}
               onCreateNote={createNoteMutation.mutateAsync}
               onDeleteNote={deleteNoteMutation.mutateAsync}

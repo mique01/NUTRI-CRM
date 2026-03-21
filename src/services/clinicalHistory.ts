@@ -5,6 +5,9 @@ import {
   type ClinicalHistoryFormValues,
 } from "@/types/domain";
 
+const CLINICAL_HISTORY_SELECT =
+  "patient_id, consultation_reason, objective, pathologies_history_surgeries, medications_supplements, eating_habits, allergies_intolerances, physical_activity, stress, sleep, digestive_system, menstrual_cycles, other_observations, updated_at";
+
 function mapClinicalHistory(row: any): ClinicalHistory {
   return {
     patientId: row.patient_id,
@@ -46,7 +49,7 @@ export async function getClinicalHistory(patientId: string) {
 
   const { data, error } = await supabase
     .from("patient_clinical_histories")
-    .select("*")
+    .select(CLINICAL_HISTORY_SELECT)
     .eq("patient_id", patientId)
     .maybeSingle();
 
@@ -77,7 +80,7 @@ export async function saveClinicalHistory(
       updated_by: profileId,
       ...normalizeClinicalHistory(values),
     })
-    .select("*")
+    .select(CLINICAL_HISTORY_SELECT)
     .single();
 
   if (error) {

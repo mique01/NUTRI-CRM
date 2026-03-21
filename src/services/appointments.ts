@@ -6,6 +6,9 @@ import type {
   DashboardConsultation,
 } from "@/types/domain";
 
+const APPOINTMENT_SELECT =
+  "id, clinic_id, patient_id, nutritionist_profile_id, starts_at, ends_at, appointment_type, notes, status, external_provider, external_event_id, sync_state";
+
 function mapAppointment(row: any): Appointment {
   return {
     id: row.id,
@@ -39,7 +42,7 @@ export async function listPatientAppointments(patientId: string) {
 
   const { data, error } = await supabase
     .from("appointments")
-    .select("*")
+    .select(APPOINTMENT_SELECT)
     .eq("patient_id", patientId)
     .order("starts_at", { ascending: true });
 
@@ -67,7 +70,7 @@ export async function createAppointment(
       sync_state: "not_connected",
       ...normalizeAppointment(values),
     })
-    .select("*")
+    .select(APPOINTMENT_SELECT)
     .single();
 
   if (error) {
@@ -87,7 +90,7 @@ export async function updateAppointment(
     .from("appointments")
     .update(normalizeAppointment(values))
     .eq("id", appointmentId)
-    .select("*")
+    .select(APPOINTMENT_SELECT)
     .single();
 
   if (error) {
@@ -101,16 +104,12 @@ export async function listDashboardConsultations(monthDate = new Date()) {
   assertSupabaseConfigured();
 
   const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-  const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
+  const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1);
 
-  const { data, error } = await supabase
-    .from("appointments")
-    .select(
-      "id, patient_id, starts_at, status, patients!inner(first_name, last_name)",
-    )
-    .gte("starts_at", monthStart.toISOString())
-    .lte("starts_at", monthEnd.toISOString())
-    .order("starts_at", { ascending: true });
+  const { data, error } = await supabase.rpc("list_dashboard_consultations", {
+    month_start: monthStart.toISOString(),
+    month_end: monthEnd.toISOString(),
+  });
 
   if (error) {
     throw error;
@@ -118,12 +117,10 @@ export async function listDashboardConsultations(monthDate = new Date()) {
 
   return ((data ?? []) as any[]).map(
     (row): DashboardConsultation => {
-      const patient = Array.isArray(row.patients) ? row.patients[0] : row.patients;
-
       return {
         id: row.id,
         patientId: row.patient_id,
-        patientName: `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim(),
+        patientName: row.patient_name ?? "",
         startsAt: row.starts_at,
         status: row.status,
       };
