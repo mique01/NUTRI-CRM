@@ -2,6 +2,12 @@ import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { calculateAge } from "@/lib/utils";
 import type { Patient, PatientFormValues } from "@/types/domain";
 
+const PATIENT_BASE_SELECT =
+  "id, clinic_id, first_name, last_name, birth_date, profession, email, phone, status, created_at, updated_at";
+const PATIENT_WITH_ALERTS_SELECT = `${PATIENT_BASE_SELECT}, alerts`;
+const PATIENT_WITH_APPOINTMENTS_SELECT = `${PATIENT_WITH_ALERTS_SELECT}, appointments(starts_at, status)`;
+const PATIENT_BASE_WITH_APPOINTMENTS_SELECT = `${PATIENT_BASE_SELECT}, appointments(starts_at, status)`;
+
 function getNextAppointment(appointments: Array<{ starts_at: string; status: string }> = []) {
   const now = new Date();
 
@@ -25,15 +31,66 @@ function getLastAppointment(appointments: Array<{ starts_at: string; status: str
 
 function normalizeAlerts(value?: string | string[] | null) {
   if (Array.isArray(value)) {
-    return value
-      .map((entry) => entry.trim())
-      .filter(Boolean);
+    return value.map((entry) => entry.trim()).filter(Boolean);
   }
 
   return (value ?? "")
     .split("\n")
     .map((entry) => entry.replace(/^[•*-]\s*/, "").trim())
     .filter(Boolean);
+}
+
+function isMissingAlertsColumn(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const message =
+    "message" in error && typeof error.message === "string" ? error.message : "";
+
+  return message.toLowerCase().includes("alerts");
+}
+
+async function selectPatientsList(withAlerts: boolean) {
+  return supabase
+    .from("patients")
+    .select(withAlerts ? PATIENT_WITH_APPOINTMENTS_SELECT : PATIENT_BASE_WITH_APPOINTMENTS_SELECT)
+    .order("created_at", { ascending: false });
+}
+
+async function selectPatientById(patientId: string, withAlerts: boolean) {
+  return supabase
+    .from("patients")
+    .select(withAlerts ? PATIENT_WITH_APPOINTMENTS_SELECT : PATIENT_BASE_WITH_APPOINTMENTS_SELECT)
+    .eq("id", patientId)
+    .maybeSingle();
+}
+
+async function insertPatient(payload: Record<string, unknown>, withAlerts: boolean) {
+  const fallbackPayload = Object.fromEntries(
+    Object.entries(payload).filter(([key]) => key !== "alerts"),
+  );
+
+  return supabase
+    .from("patients")
+    .insert(withAlerts ? payload : fallbackPayload)
+    .select(withAlerts ? PATIENT_WITH_ALERTS_SELECT : PATIENT_BASE_SELECT)
+    .single();
+}
+
+async function updatePatientRecord(
+  patientId: string,
+  payload: Record<string, unknown>,
+  withAlerts: boolean,
+) {
+  const fallbackPayload = Object.fromEntries(
+    Object.entries(payload).filter(([key]) => key !== "alerts"),
+  );
+
+  return supabase
+    .from("patients")
+    .update(withAlerts ? payload : fallbackPayload)
+    .eq("id", patientId)
+    .select(withAlerts ? PATIENT_WITH_ALERTS_SELECT : PATIENT_BASE_SELECT)
+    .single();
 }
 
 function mapPatient(row: any): Patient {
@@ -72,12 +129,11 @@ function normalizePatientPayload(values: PatientFormValues) {
 export async function listPatients() {
   assertSupabaseConfigured();
 
-  const { data, error } = await supabase
-    .from("patients")
-    .select(
-      "id, clinic_id, first_name, last_name, birth_date, profession, email, phone, alerts, status, created_at, updated_at, appointments(starts_at, status)",
-    )
-    .order("created_at", { ascending: false });
+  let { data, error } = await selectPatientsList(true);
+
+  if (error && isMissingAlertsColumn(error)) {
+    ({ data, error } = await selectPatientsList(false));
+  }
 
   if (error) {
     throw error;
@@ -89,11 +145,11 @@ export async function listPatients() {
 export async function getPatientById(patientId: string) {
   assertSupabaseConfigured();
 
-  const { data, error } = await supabase
-    .from("patients")
-    .select("id, clinic_id, first_name, last_name, birth_date, profession, email, phone, alerts, status, created_at, updated_at, appointments(starts_at, status)")
-    .eq("id", patientId)
-    .maybeSingle();
+  let { data, error } = await selectPatientById(patientId, true);
+
+  if (error && isMissingAlertsColumn(error)) {
+    ({ data, error } = await selectPatientById(patientId, false));
+  }
 
   if (error) {
     throw error;
@@ -116,11 +172,11 @@ export async function createPatient(
     ...normalizePatientPayload(values),
   };
 
-  const { data, error } = await supabase
-    .from("patients")
-    .insert(payload)
-    .select("id, clinic_id, first_name, last_name, birth_date, profession, email, phone, alerts, status, created_at, updated_at")
-    .single();
+  let { data, error } = await insertPatient(payload, true);
+
+  if (error && isMissingAlertsColumn(error)) {
+    ({ data, error } = await insertPatient(payload, false));
+  }
 
   if (error) {
     throw error;
@@ -136,15 +192,16 @@ export async function updatePatient(
 ) {
   assertSupabaseConfigured();
 
-  const { data, error } = await supabase
-    .from("patients")
-    .update({
-      ...normalizePatientPayload(values),
-      updated_by: profileId,
-    })
-    .eq("id", patientId)
-    .select("id, clinic_id, first_name, last_name, birth_date, profession, email, phone, alerts, status, created_at, updated_at")
-    .single();
+  const payload = {
+    ...normalizePatientPayload(values),
+    updated_by: profileId,
+  };
+
+  let { data, error } = await updatePatientRecord(patientId, payload, true);
+
+  if (error && isMissingAlertsColumn(error)) {
+    ({ data, error } = await updatePatientRecord(patientId, payload, false));
+  }
 
   if (error) {
     throw error;

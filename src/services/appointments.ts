@@ -97,12 +97,11 @@ export async function updateAppointment(
   return mapAppointment(data);
 }
 
-export async function listDashboardConsultations() {
+export async function listDashboardConsultations(monthDate = new Date()) {
   assertSupabaseConfigured();
 
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
 
   const { data, error } = await supabase
     .from("appointments")

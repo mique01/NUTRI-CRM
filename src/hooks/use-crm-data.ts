@@ -13,10 +13,12 @@ export function usePatientsQuery() {
   });
 }
 
-export function useDashboardConsultationsQuery() {
+export function useDashboardConsultationsQuery(monthDate: Date) {
+  const monthKey = `${monthDate.getFullYear()}-${monthDate.getMonth() + 1}`;
+
   return useQuery({
-    queryKey: queryKeys.dashboardConsultations,
-    queryFn: listDashboardConsultations,
+    queryKey: queryKeys.dashboardConsultations(monthKey),
+    queryFn: () => listDashboardConsultations(monthDate),
   });
 }
 

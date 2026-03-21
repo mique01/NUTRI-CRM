@@ -8,31 +8,24 @@ interface ClinicalHistorySectionProps {
   onSave: (values: ClinicalHistoryFormValues) => Promise<void>;
 }
 
+const BULLET = "\u2022 ";
+
 const fields: Array<{
   key: keyof ClinicalHistoryFormValues;
   label: string;
-  placeholder: string;
 }> = [
-  { key: "consultationReason", label: "Motivo de consulta", placeholder: "• " },
-  { key: "objective", label: "Objetivo", placeholder: "• " },
-  {
-    key: "pathologiesHistorySurgeries",
-    label: "Patologias, antecedentes y cirugias",
-    placeholder: "• ",
-  },
-  {
-    key: "medicationsSupplements",
-    label: "Medicamentos y suplementos",
-    placeholder: "• ",
-  },
-  { key: "eatingHabits", label: "Habitos alimentarios", placeholder: "• " },
-  { key: "allergiesIntolerances", label: "Alergias e intolerancias", placeholder: "• " },
-  { key: "physicalActivity", label: "Actividad fisica", placeholder: "• " },
-  { key: "stress", label: "Estres", placeholder: "• " },
-  { key: "sleep", label: "Descanso", placeholder: "• " },
-  { key: "digestiveSystem", label: "Sistema digestivo", placeholder: "• " },
-  { key: "menstrualCycles", label: "Ciclos menstruales", placeholder: "• " },
-  { key: "otherObservations", label: "Otras observaciones", placeholder: "• " },
+  { key: "consultationReason", label: "Motivo de consulta" },
+  { key: "objective", label: "Objetivo" },
+  { key: "pathologiesHistorySurgeries", label: "Patologias, antecedentes y cirugias" },
+  { key: "medicationsSupplements", label: "Medicamentos y suplementos" },
+  { key: "eatingHabits", label: "Habitos alimentarios" },
+  { key: "allergiesIntolerances", label: "Alergias e intolerancias" },
+  { key: "physicalActivity", label: "Actividad fisica" },
+  { key: "stress", label: "Estres" },
+  { key: "sleep", label: "Descanso" },
+  { key: "digestiveSystem", label: "Sistema digestivo" },
+  { key: "menstrualCycles", label: "Ciclos menstruales" },
+  { key: "otherObservations", label: "Otras observaciones" },
 ];
 
 function toFormValues(history?: ClinicalHistory): ClinicalHistoryFormValues {
@@ -52,16 +45,25 @@ function toFormValues(history?: ClinicalHistory): ClinicalHistoryFormValues {
   };
 }
 
-function ensureBulletPrefix(value: string) {
+function normalizeListValue(value: string) {
   if (!value.trim()) return "";
 
   return value
     .split("\n")
-    .map((line) => {
-      if (!line.trim()) return "";
-      return line.trimStart().startsWith("•") ? line : `• ${line.trim()}`;
-    })
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => `${BULLET}${line.replace(/^(?:\u2022|-|\*)\s*/, "").trim()}`)
     .join("\n");
+}
+
+function ensureEditingValue(value: string) {
+  if (!value.trim()) return BULLET;
+  return normalizeListValue(value);
+}
+
+function getRowCount(value: string) {
+  const lineCount = value.split("\n").filter((line) => line.trim().length > 0).length;
+  return Math.max(1, Math.min(lineCount || 1, 5));
 }
 
 export default function ClinicalHistorySection({
@@ -81,6 +83,17 @@ export default function ClinicalHistorySection({
     setFormValues((current) => ({ ...current, [field]: value }));
   };
 
+  const handleFocus = (field: keyof ClinicalHistoryFormValues) => {
+    const currentValue = formValues[field];
+    if (!currentValue) {
+      handleChange(field, BULLET);
+    }
+  };
+
+  const handleBlur = (field: keyof ClinicalHistoryFormValues) => {
+    handleChange(field, normalizeListValue(formValues[field]));
+  };
+
   const handleKeyDown = (
     field: keyof ClinicalHistoryFormValues,
     event: KeyboardEvent<HTMLTextAreaElement>,
@@ -88,19 +101,20 @@ export default function ClinicalHistorySection({
     if (event.key !== "Enter" || event.shiftKey) return;
 
     event.preventDefault();
+
     const target = event.currentTarget;
     const start = target.selectionStart ?? 0;
     const end = target.selectionEnd ?? 0;
-    const currentValue = formValues[field];
-    const insertValue = "\n• ";
-    const nextValue =
-      currentValue.slice(0, start) + insertValue + currentValue.slice(end);
+    const preparedValue = ensureEditingValue(formValues[field]);
+    const insertValue = `\n${BULLET}`;
+    const nextValue = preparedValue.slice(0, start) + insertValue + preparedValue.slice(end);
 
     handleChange(field, nextValue);
 
     window.requestAnimationFrame(() => {
-      target.selectionStart = start + insertValue.length;
-      target.selectionEnd = start + insertValue.length;
+      const cursor = start + insertValue.length;
+      target.selectionStart = cursor;
+      target.selectionEnd = cursor;
     });
   };
 
@@ -108,7 +122,7 @@ export default function ClinicalHistorySection({
     event.preventDefault();
 
     const sanitized = Object.fromEntries(
-      Object.entries(formValues).map(([key, value]) => [key, ensureBulletPrefix(value)]),
+      Object.entries(formValues).map(([key, value]) => [key, normalizeListValue(value)]),
     ) as ClinicalHistoryFormValues;
 
     setFormValues(sanitized);
@@ -116,37 +130,39 @@ export default function ClinicalHistorySection({
   };
 
   return (
-    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary">
+    <section className="rounded-[28px] border border-border bg-card p-5 shadow-card md:p-6">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary">
           <ClipboardList className="h-4.5 w-4.5 text-muted-foreground" />
         </div>
         <div>
           <h3 className="font-semibold text-card-foreground">Historia clinica</h3>
           <p className="text-xs text-muted-foreground">
-            Cada bloque funciona como lista. Al presionar Enter se agrega un bullet nuevo.
+            Formato lista. Enter agrega un item nuevo.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {fields.map((field) => (
-          <div key={field.key} className="border-b border-border/70 pb-4 last:border-b-0">
-            <label className="mb-2 block text-sm font-semibold text-foreground">
+          <div key={field.key} className="border-b border-border/60 pb-2.5 last:border-b-0">
+            <label className="mb-1 block text-[13px] font-semibold text-foreground">
               {field.label}
             </label>
             <textarea
               value={formValues[field.key]}
               onChange={(event) => handleChange(field.key, event.target.value)}
+              onFocus={() => handleFocus(field.key)}
+              onBlur={() => handleBlur(field.key)}
               onKeyDown={(event) => handleKeyDown(field.key, event)}
-              placeholder={field.placeholder}
-              rows={Math.max(2, (formValues[field.key].match(/\n/g)?.length ?? 0) + 2)}
-              className="w-full resize-none border-0 bg-transparent px-0 py-0 text-sm leading-7 text-foreground outline-none placeholder:text-muted-foreground/70 focus-visible:ring-0"
+              placeholder={BULLET}
+              rows={getRowCount(formValues[field.key])}
+              className="w-full resize-none border-0 bg-transparent px-0 py-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
             />
           </div>
         ))}
 
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-1">
           <button
             type="submit"
             disabled={isSaving}

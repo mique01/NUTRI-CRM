@@ -1,6 +1,7 @@
 export const queryKeys = {
   clinicContext: ["clinic-context"] as const,
-  dashboardConsultations: ["dashboard", "consultations"] as const,
+  dashboardConsultations: (monthKey: string) =>
+    ["dashboard", "consultations", monthKey] as const,
   patients: ["patients"] as const,
   patient: (patientId: string) => ["patients", patientId] as const,
   patientHistory: (patientId: string) => ["patients", patientId, "history"] as const,
