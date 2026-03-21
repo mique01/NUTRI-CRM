@@ -136,5 +136,5 @@ export async function tryAcceptSupabaseAuthInvite() {
     throw error;
   }
 
-  return data ? mapMembership(data) : null;
+  return data ?? null;
 }
