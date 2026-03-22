@@ -69,9 +69,9 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  if (sharedAccessRequired && !sharedAccessUnlocked) return <Navigate to="/unlock" replace />;
   if (accessStatus === "pending_bootstrap") return <Navigate to="/setup" replace />;
   if (!clinic || accessStatus === "denied") return <Navigate to="/login" replace />;
-  if (sharedAccessRequired && !sharedAccessUnlocked) return <Navigate to="/unlock" replace />;
   return <>{children}</>;
 };
 
@@ -88,6 +88,10 @@ const GuestRoute = ({ children }: { children: ReactNode }) => {
     );
   }
 
+  if (user && sharedAccessRequired && !sharedAccessUnlocked) {
+    return <Navigate to="/unlock" replace />;
+  }
+
   if (user && clinic && accessStatus === "member") {
     return (
       <Navigate
@@ -101,7 +105,8 @@ const GuestRoute = ({ children }: { children: ReactNode }) => {
 };
 
 const SetupRoute = () => {
-  const { user, clinic, accessStatus, loading } = useAuth();
+  const { user, clinic, accessStatus, loading, sharedAccessRequired, sharedAccessUnlocked } =
+    useAuth();
 
   if (loading) {
     return (
@@ -113,6 +118,7 @@ const SetupRoute = () => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  if (sharedAccessRequired && !sharedAccessUnlocked) return <Navigate to="/unlock" replace />;
   if (clinic && accessStatus === "member") return <Navigate to="/" replace />;
   if (accessStatus === "denied") return <Navigate to="/login" replace />;
   return <Setup />;
@@ -132,8 +138,12 @@ const UnlockRoute = () => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (accessStatus === "pending_bootstrap") return <Navigate to="/setup" replace />;
-  if (!clinic || accessStatus === "denied") return <Navigate to="/login" replace />;
+  if (!sharedAccessRequired && accessStatus === "pending_bootstrap") {
+    return <Navigate to="/setup" replace />;
+  }
+  if (!sharedAccessRequired && (!clinic || accessStatus === "denied")) {
+    return <Navigate to="/login" replace />;
+  }
   if (!sharedAccessRequired || sharedAccessUnlocked) return <Navigate to="/" replace />;
   return <Unlock />;
 };

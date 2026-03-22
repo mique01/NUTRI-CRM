@@ -151,7 +151,7 @@ type ResolvedAuthState = Awaited<ReturnType<typeof loadAuthContext>>;
 async function withSharedAccessState(
   nextState: ResolvedAuthState,
 ): Promise<ResolvedAuthState & SharedAccessState> {
-  if (!nextState.session?.user || nextState.accessStatus !== "member") {
+  if (!nextState.session?.user) {
     return {
       ...nextState,
       required: false,
@@ -196,13 +196,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return nextState;
     }
 
-    if (nextState.session?.user && nextState.accessStatus === "denied") {
+    if (
+      nextState.session?.user &&
+      nextState.accessStatus === "denied" &&
+      !nextState.required
+    ) {
       persistDeniedAccessMessage();
       await signOut();
       return emptyAuthState;
     }
 
-    clearDeniedAccessMessage();
+    if (nextState.accessStatus !== "denied" || nextState.required) {
+      clearDeniedAccessMessage();
+    }
+
     return nextState;
   };
 
@@ -270,6 +277,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const sharedAccessState = await unlockSharedAccess(session, password);
         setSharedAccessRequired(sharedAccessState.required);
         setSharedAccessUnlocked(sharedAccessState.unlocked);
+        await refreshContext();
       },
       logout: signOut,
       refreshContext,

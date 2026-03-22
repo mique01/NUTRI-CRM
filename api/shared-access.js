@@ -1,5 +1,11 @@
 import crypto from "node:crypto";
-import { getAuthenticatedUser } from "./_lib/access-request.js";
+import {
+  createServiceRoleClient,
+  ensureMembership,
+  getAuthenticatedUser,
+  getMembership,
+  getPrimaryClinic,
+} from "./_lib/access-request.js";
 
 const COOKIE_NAME = "nutricrm_shared_access";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 12;
@@ -152,6 +158,26 @@ export default async function handler(req, res) {
       clearSharedAccessCookie(res);
       json(res, 401, { error: "La contraseña secundaria es incorrecta." });
       return;
+    }
+
+    const serviceClient = createServiceRoleClient();
+    const membership = await getMembership(serviceClient, user.id);
+
+    if (!membership) {
+      const clinic = await getPrimaryClinic(serviceClient);
+
+      if (!clinic) {
+        json(res, 409, {
+          error: "Todavia no hay un consultorio principal configurado en el CRM.",
+        });
+        return;
+      }
+
+      await ensureMembership(serviceClient, {
+        clinicId: clinic.id,
+        profileId: user.id,
+        role: "nutritionist",
+      });
     }
 
     setSharedAccessCookie(res, buildCookieValue(user.id, sharedAccessPassword));
