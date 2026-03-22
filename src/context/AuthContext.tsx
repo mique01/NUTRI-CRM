@@ -11,11 +11,14 @@ import type { Session } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import {
   clearDeniedAccessMessage,
+  getSharedAccessState,
   mapAuthUser,
   persistDeniedAccessMessage,
+  signInWithGoogle,
   signInWithAuthorizedEmail,
   signOut,
   syncCurrentProfile,
+  unlockSharedAccess,
 } from "@/services/auth";
 import {
   acceptMyClinicInvite,
@@ -23,7 +26,14 @@ import {
   getMyAccessState,
   tryAcceptSupabaseAuthInvite,
 } from "@/services/clinic";
-import type { AccessState, AuthAccessStatus, AuthUser, Clinic, ClinicMembership } from "@/types/domain";
+import type {
+  AccessState,
+  AuthAccessStatus,
+  AuthUser,
+  Clinic,
+  ClinicMembership,
+  SharedAccessState,
+} from "@/types/domain";
 
 interface AuthContextType {
   session: Session | null;
@@ -32,9 +42,13 @@ interface AuthContextType {
   membership: ClinicMembership | null;
   accessStatus: AuthAccessStatus;
   accessState: AccessState | null;
+  sharedAccessRequired: boolean;
+  sharedAccessUnlocked: boolean;
   loading: boolean;
   isConfigured: boolean;
   loginWithEmail: (email: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  unlockWithSharedPassword: (password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshContext: () => Promise<void>;
 }
@@ -50,6 +64,8 @@ const emptyAuthState = {
   membership: null,
   accessStatus: "denied" as const,
   accessState: null,
+  sharedAccessRequired: false,
+  sharedAccessUnlocked: false,
 };
 
 async function loadAuthContext(session: Session | null) {
@@ -132,6 +148,25 @@ async function loadAuthContext(session: Session | null) {
 
 type ResolvedAuthState = Awaited<ReturnType<typeof loadAuthContext>>;
 
+async function withSharedAccessState(
+  nextState: ResolvedAuthState,
+): Promise<ResolvedAuthState & SharedAccessState> {
+  if (!nextState.session?.user || nextState.accessStatus !== "member") {
+    return {
+      ...nextState,
+      required: false,
+      unlocked: false,
+    };
+  }
+
+  const sharedAccessState = await getSharedAccessState(nextState.session);
+
+  return {
+    ...nextState,
+    ...sharedAccessState,
+  };
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -139,19 +174,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [membership, setMembership] = useState<ClinicMembership | null>(null);
   const [accessStatus, setAccessStatus] = useState<AuthAccessStatus>("denied");
   const [accessState, setAccessState] = useState<AccessState | null>(null);
+  const [sharedAccessRequired, setSharedAccessRequired] = useState(false);
+  const [sharedAccessUnlocked, setSharedAccessUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const applyState = (nextState: ResolvedAuthState) => {
+  const applyState = (nextState: ResolvedAuthState & SharedAccessState) => {
     setSession(nextState.session);
     setUser(nextState.user);
     setClinic(nextState.clinic);
     setMembership(nextState.membership);
     setAccessStatus(nextState.accessStatus);
     setAccessState(nextState.accessState);
+    setSharedAccessRequired(nextState.required);
+    setSharedAccessUnlocked(nextState.unlocked);
   };
 
   const resolveSessionState = async (currentSession: Session | null) => {
-    const nextState = await loadAuthContext(currentSession);
+    const nextState = await withSharedAccessState(await loadAuthContext(currentSession));
 
     if (!currentSession?.user) {
       return nextState;
@@ -217,13 +256,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       membership,
       accessStatus,
       accessState,
+      sharedAccessRequired,
+      sharedAccessUnlocked,
       loading,
       isConfigured: isSupabaseConfigured,
       loginWithEmail: signInWithAuthorizedEmail,
+      loginWithGoogle: signInWithGoogle,
+      unlockWithSharedPassword: async (password: string) => {
+        if (!session) {
+          throw new Error("Tu sesión ya no es válida. Volvé a ingresar.");
+        }
+
+        const sharedAccessState = await unlockSharedAccess(session, password);
+        setSharedAccessRequired(sharedAccessState.required);
+        setSharedAccessUnlocked(sharedAccessState.unlocked);
+      },
       logout: signOut,
       refreshContext,
     }),
-    [session, user, clinic, membership, accessStatus, accessState, loading],
+    [
+      session,
+      user,
+      clinic,
+      membership,
+      accessStatus,
+      accessState,
+      sharedAccessRequired,
+      sharedAccessUnlocked,
+      loading,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

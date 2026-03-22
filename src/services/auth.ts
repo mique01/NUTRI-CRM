@@ -1,7 +1,7 @@
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { getDisplayName } from "@/lib/utils";
-import type { AuthUser } from "@/types/domain";
+import type { AuthUser, SharedAccessState } from "@/types/domain";
 
 const ACCESS_DENIED_STORAGE_KEY = "nutricrm.accessDeniedMessage";
 const DEFAULT_DENIED_MESSAGE =
@@ -46,8 +46,98 @@ export async function signInWithAuthorizedEmail(email: string) {
   }
 }
 
+export async function signInWithGoogle() {
+  assertSupabaseConfigured();
+
+  const redirectUrl = new URL("/auth/callback", window.location.origin);
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: redirectUrl.toString(),
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function sharedAccessRequest(
+  session: Session,
+  options: {
+    method?: "GET" | "POST" | "DELETE";
+    body?: Record<string, unknown>;
+  } = {},
+) {
+  const response = await fetch("/api/shared-access", {
+    method: options.method ?? "GET",
+    credentials: "include",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "No pudimos validar el acceso secundario.");
+  }
+
+  return payload;
+}
+
+export async function getSharedAccessState(
+  session: Session | null,
+): Promise<SharedAccessState> {
+  if (!session?.access_token) {
+    return { required: false, unlocked: false };
+  }
+
+  const payload = await sharedAccessRequest(session);
+  return {
+    required: Boolean(payload?.required),
+    unlocked: Boolean(payload?.unlocked),
+  };
+}
+
+export async function unlockSharedAccess(session: Session, password: string) {
+  const payload = await sharedAccessRequest(session, {
+    method: "POST",
+    body: { password },
+  });
+
+  return {
+    required: Boolean(payload?.required),
+    unlocked: Boolean(payload?.unlocked),
+  };
+}
+
+export async function clearSharedAccess(session: Session | null) {
+  if (!session?.access_token) {
+    return;
+  }
+
+  await sharedAccessRequest(session, { method: "DELETE" });
+}
+
 export async function signOut() {
   assertSupabaseConfigured();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  try {
+    await clearSharedAccess(session);
+  } catch {
+    // Best-effort cleanup; failed cookie clearing should not block logout.
+  }
+
   const { error } = await supabase.auth.signOut();
 
   if (error) {

@@ -34,6 +34,11 @@ export interface AccessState {
   invitedEmail: string | null;
 }
 
+export interface SharedAccessState {
+  required: boolean;
+  unlocked: boolean;
+}
+
 export interface Patient {
   id: string;
   clinicId: string;

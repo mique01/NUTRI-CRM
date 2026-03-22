@@ -12,6 +12,7 @@ import NotFound from "@/pages/NotFound";
 import PatientDetail from "@/pages/PatientDetail";
 import Patients from "@/pages/Patients";
 import Setup from "@/pages/Setup";
+import Unlock from "@/pages/Unlock";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,7 +40,15 @@ const FullscreenMessage = ({
 );
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { user, clinic, accessStatus, loading, isConfigured } = useAuth();
+  const {
+    user,
+    clinic,
+    accessStatus,
+    loading,
+    isConfigured,
+    sharedAccessRequired,
+    sharedAccessUnlocked,
+  } = useAuth();
 
   if (loading) {
     return (
@@ -62,11 +71,13 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   if (!user) return <Navigate to="/login" replace />;
   if (accessStatus === "pending_bootstrap") return <Navigate to="/setup" replace />;
   if (!clinic || accessStatus === "denied") return <Navigate to="/login" replace />;
+  if (sharedAccessRequired && !sharedAccessUnlocked) return <Navigate to="/unlock" replace />;
   return <>{children}</>;
 };
 
 const GuestRoute = ({ children }: { children: ReactNode }) => {
-  const { user, clinic, accessStatus, loading } = useAuth();
+  const { user, clinic, accessStatus, loading, sharedAccessRequired, sharedAccessUnlocked } =
+    useAuth();
 
   if (loading) {
     return (
@@ -77,7 +88,14 @@ const GuestRoute = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (user && clinic && accessStatus === "member") return <Navigate to="/" replace />;
+  if (user && clinic && accessStatus === "member") {
+    return (
+      <Navigate
+        to={sharedAccessRequired && !sharedAccessUnlocked ? "/unlock" : "/"}
+        replace
+      />
+    );
+  }
   if (user && accessStatus === "pending_bootstrap") return <Navigate to="/setup" replace />;
   return <>{children}</>;
 };
@@ -100,6 +118,26 @@ const SetupRoute = () => {
   return <Setup />;
 };
 
+const UnlockRoute = () => {
+  const { user, clinic, accessStatus, loading, sharedAccessRequired, sharedAccessUnlocked } =
+    useAuth();
+
+  if (loading) {
+    return (
+      <FullscreenMessage
+        title="Validando acceso"
+        body="Estamos comprobando la sesiÃ³n y el desbloqueo del CRM."
+      />
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  if (accessStatus === "pending_bootstrap") return <Navigate to="/setup" replace />;
+  if (!clinic || accessStatus === "denied") return <Navigate to="/login" replace />;
+  if (!sharedAccessRequired || sharedAccessUnlocked) return <Navigate to="/" replace />;
+  return <Unlock />;
+};
+
 const AppRoutes = () => (
   <BrowserRouter>
     <Routes>
@@ -113,6 +151,7 @@ const AppRoutes = () => (
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/setup" element={<SetupRoute />} />
+      <Route path="/unlock" element={<UnlockRoute />} />
       <Route
         path="/"
         element={

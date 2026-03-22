@@ -9,9 +9,10 @@ import {
 } from "@/services/auth";
 
 const Login = () => {
-  const { accessStatus, isConfigured, loginWithEmail, logout, user } = useAuth();
+  const { accessStatus, isConfigured, loginWithEmail, loginWithGoogle, logout, user } = useAuth();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [linkSent, setLinkSent] = useState(false);
   const [deniedMessage, setDeniedMessage] = useState<string | null>(() => getDeniedAccessMessage());
 
@@ -42,6 +43,23 @@ const Login = () => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    if (!isConfigured) return;
+
+    clearDeniedAccessMessage();
+    setDeniedMessage(null);
+    setIsGoogleSubmitting(true);
+
+    try {
+      await loginWithGoogle();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo iniciar sesion con Google.",
+      );
+      setIsGoogleSubmitting(false);
+    }
+  };
+
   const showDeniedState = Boolean(deniedMessage) || (user && accessStatus === "denied");
   const visibleMessage = deniedMessage ?? getDefaultDeniedAccessMessage();
 
@@ -56,8 +74,8 @@ const Login = () => {
             Bienvenida a NutriCRM
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Ingresa con un email autorizado. Solo pueden entrar las cuentas que hayas invitado
-            previamente desde Supabase.
+            Ingresa con tu cuenta autorizada. Primero validamos tu usuario y luego te vamos a
+            pedir la contraseña compartida del equipo antes de mostrar informacion clinica.
           </p>
         </div>
 
@@ -68,7 +86,8 @@ const Login = () => {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              Pedi la invitacion desde Supabase y luego vuelve a ingresar con ese mismo email.
+              Si la cuenta correcta ya esta autorizada, vuelve a intentar con Google o con el
+              email habilitado del equipo.
             </p>
 
             {user ? (
@@ -83,6 +102,23 @@ const Login = () => {
           </div>
         ) : (
           <div className="space-y-4">
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleSubmitting || !isConfigured}
+              className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className="text-base leading-none">G</span>
+              {isGoogleSubmitting ? "Redirigiendo a Google..." : "Ingresar con Google"}
+            </button>
+
+            <div className="relative py-1 text-center text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              <span className="bg-[linear-gradient(180deg,rgba(252,249,228,0.97),rgba(244,238,210,0.96))] px-3">
+                o con email
+              </span>
+              <div className="absolute left-0 right-0 top-1/2 -z-10 h-px -translate-y-1/2 bg-border/70" />
+            </div>
+
             <div>
               <label
                 htmlFor="authorized-email"
@@ -119,7 +155,8 @@ const Login = () => {
             </button>
 
             <p className="text-center text-xs text-muted-foreground">
-              Una vez dentro del CRM vas a poder conectar Google para integrar Calendar.
+              Google puede usarse para entrar y luego desbloquear el CRM con la contraseña del
+              equipo. El acceso por email sigue disponible como respaldo.
             </p>
           </div>
         )}
