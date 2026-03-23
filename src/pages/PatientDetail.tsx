@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
 import ConsultationsSection from "@/components/ConsultationsSection";
 import FileList from "@/components/FileList";
-import NotesSection from "@/components/NotesSection";
 import PatientFormDialog from "@/components/PatientFormDialog";
 import {
   AlertDialog,
@@ -34,14 +33,13 @@ import {
   uploadMedicalStudy,
   uploadNutritionPlan,
 } from "@/services/files";
-import { createPatientNote, deletePatientNote } from "@/services/notes";
 import { deletePatient, updatePatient } from "@/services/patients";
 import type { PatientConsultationFormValues, PatientFormValues } from "@/types/domain";
 
 const PatientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { clinic, user } = useAuth();
+  const { clinic, user, currentProfessionalProfile: authProfessionalProfile } = useAuth();
   const queryClient = useQueryClient();
   const [patientDialogOpen, setPatientDialogOpen] = useState(false);
   const [planUploadStatus, setPlanUploadStatus] = useState<string | null>(null);
@@ -50,9 +48,9 @@ const PatientDetail = () => {
   const patientDetailQuery = usePatientDetailQuery(id);
 
   const patient = patientDetailQuery.data?.patient ?? null;
-  const currentProfessionalProfile = patientDetailQuery.data?.currentProfessionalProfile ?? null;
+  const currentProfessionalProfile =
+    patientDetailQuery.data?.currentProfessionalProfile ?? authProfessionalProfile ?? null;
   const consultations = patientDetailQuery.data?.consultations ?? [];
-  const notes = patientDetailQuery.data?.notes ?? [];
   const appointments = patientDetailQuery.data?.appointments ?? [];
   const plans = patientDetailQuery.data?.nutritionPlans ?? [];
   const studies = patientDetailQuery.data?.medicalStudies ?? [];
@@ -115,28 +113,6 @@ const PatientDetail = () => {
       toast.error(
         error instanceof Error ? error.message : "No se pudo guardar la consulta.",
       );
-    },
-  });
-
-  const createNoteMutation = useMutation({
-    mutationFn: (content: string) => createPatientNote(clinic!.id, id!, user!.id, content),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
-      toast.success("Nota guardada.");
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "No se pudo guardar la nota.");
-    },
-  });
-
-  const deleteNoteMutation = useMutation({
-    mutationFn: (noteId: string) => deletePatientNote(noteId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
-      toast.success("Nota eliminada.");
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "No se pudo eliminar la nota.");
     },
   });
 
@@ -473,13 +449,6 @@ const PatientDetail = () => {
               onUpload={uploadStudyMutation.mutateAsync}
               onDownload={handleDownloadStudy}
               onDelete={deleteStudyMutation.mutateAsync}
-            />
-
-            <NotesSection
-              notes={notes}
-              isSaving={createNoteMutation.isPending}
-              onCreateNote={createNoteMutation.mutateAsync}
-              onDeleteNote={deleteNoteMutation.mutateAsync}
             />
           </div>
         </div>

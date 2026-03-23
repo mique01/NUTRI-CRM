@@ -2,6 +2,7 @@ import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { calculateAge } from "@/lib/utils";
 import { listPatientAppointments } from "@/services/appointments";
 import { getClinicalHistory } from "@/services/clinicalHistory";
+import { listPatientConsultations } from "@/services/consultations";
 import { listMedicalStudies, listNutritionPlans } from "@/services/files";
 import { listPatientNotes } from "@/services/notes";
 import { getPatientById } from "@/services/patients";
@@ -194,10 +195,11 @@ export async function getPatientDetailBundle(
   });
 
   if (error && shouldFallbackToLegacyPatientBundle(error)) {
-    const [patient, history, notes, appointments, nutritionPlans, medicalStudies] =
+    const [patient, history, consultations, notes, appointments, nutritionPlans, medicalStudies] =
       await Promise.all([
         getPatientById(patientId),
         getClinicalHistory(patientId),
+        listPatientConsultations(patientId),
         listPatientNotes(patientId),
         listPatientAppointments(patientId),
         listNutritionPlans(patientId),
@@ -212,7 +214,7 @@ export async function getPatientDetailBundle(
       patient,
       history,
       currentProfessionalProfile: null,
-      consultations: [],
+      consultations,
       notes,
       appointments,
       nutritionPlans,

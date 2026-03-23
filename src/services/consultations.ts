@@ -1,5 +1,6 @@
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import type {
+  PatientConsultation,
   ConsultationCriterionFormValue,
   PatientConsultationFormValues,
   ProfessionalProfile,
@@ -38,6 +39,31 @@ function mapProfessionalProfile(row: any): ProfessionalProfile {
     professionalTitle: row.professional_title ?? "",
     specialty: row.specialty ?? "",
     avatarUrl: row.avatar_url ?? null,
+  };
+}
+
+function mapPatientConsultation(row: any): PatientConsultation {
+  const author = Array.isArray(row.author) ? row.author[0] : row.author;
+
+  return {
+    id: row.id,
+    clinicId: row.clinic_id,
+    patientId: row.patient_id,
+    authorProfileId: row.author_profile_id ?? null,
+    authorName: author?.full_name ?? author?.email ?? "Profesional del equipo",
+    authorProfessionalTitle: author?.professional_title ?? "",
+    authorSpecialty: author?.specialty ?? "",
+    consultationType: row.consultation_type ?? "",
+    notes: row.notes ?? "",
+    criteria: Array.isArray(row.criteria)
+      ? row.criteria.map((criterion: any, index: number) => ({
+          id: criterion.id ?? `${row.id}-${index}`,
+          label: criterion.label ?? "",
+          content: criterion.content ?? "",
+        }))
+      : [],
+    consultedAt: row.consulted_at ?? row.created_at,
+    createdAt: row.created_at,
   };
 }
 
@@ -105,4 +131,22 @@ export async function createPatientConsultation(
   if (error) {
     throw error;
   }
+}
+
+export async function listPatientConsultations(patientId: string) {
+  assertSupabaseConfigured();
+
+  const { data, error } = await supabase
+    .from("patient_consultations")
+    .select(
+      "id, clinic_id, patient_id, author_profile_id, consultation_type, notes, criteria, consulted_at, created_at, author:profiles(id, email, full_name, professional_title, specialty)",
+    )
+    .eq("patient_id", patientId)
+    .order("consulted_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(mapPatientConsultation);
 }
