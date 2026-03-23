@@ -25,10 +25,7 @@ import {
 } from "@/hooks/use-crm-data";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate, formatDateTime, getInitials } from "@/lib/utils";
-import {
-  createPatientConsultation,
-  updateProfessionalProfile,
-} from "@/services/consultations";
+import { createPatientConsultation } from "@/services/consultations";
 import {
   deleteMedicalStudy,
   deleteNutritionPlan,
@@ -54,7 +51,6 @@ const PatientDetail = () => {
 
   const patient = patientDetailQuery.data?.patient ?? null;
   const currentProfessionalProfile = patientDetailQuery.data?.currentProfessionalProfile ?? null;
-  const history = patientDetailQuery.data?.history;
   const consultations = patientDetailQuery.data?.consultations ?? [];
   const notes = patientDetailQuery.data?.notes ?? [];
   const appointments = patientDetailQuery.data?.appointments ?? [];
@@ -104,20 +100,6 @@ const PatientDetail = () => {
     onError: (error) => {
       toast.error(
         error instanceof Error ? error.message : "No se pudo eliminar el paciente.",
-      );
-    },
-  });
-
-  const updateProfessionalProfileMutation = useMutation({
-    mutationFn: (values: { professionalTitle: string; specialty: string }) =>
-      updateProfessionalProfile(user!.id, values),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
-      toast.success("Firma profesional actualizada.");
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "No se pudo actualizar el perfil profesional.",
       );
     },
   });
@@ -450,12 +432,9 @@ const PatientDetail = () => {
           <div className="space-y-6">
             <ConsultationsSection
               currentProfessionalProfile={currentProfessionalProfile}
-              history={history}
               consultations={consultations}
               isSavingConsultation={createConsultationMutation.isPending}
-              isSavingProfile={updateProfessionalProfileMutation.isPending}
               onCreateConsultation={createConsultationMutation.mutateAsync}
-              onSaveProfessionalProfile={updateProfessionalProfileMutation.mutateAsync}
             />
           </div>
 

@@ -41,6 +41,22 @@ function mapProfessionalProfile(row: any): ProfessionalProfile {
   };
 }
 
+export async function getProfessionalProfile(profileId: string) {
+  assertSupabaseConfigured();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(PROFILE_SELECT)
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? mapProfessionalProfile(data) : null;
+}
+
 export async function updateProfessionalProfile(
   profileId: string,
   values: {

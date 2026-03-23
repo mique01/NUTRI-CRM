@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Plus, Save } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ClipboardList, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/utils";
 import type {
-  ClinicalHistory,
   ConsultationCriterionFormValue,
   PatientConsultation,
   PatientConsultationFormValues,
@@ -11,33 +17,12 @@ import type {
 
 interface ConsultationsSectionProps {
   currentProfessionalProfile: ProfessionalProfile | null;
-  history?: ClinicalHistory;
   consultations: PatientConsultation[];
   isSavingConsultation?: boolean;
-  isSavingProfile?: boolean;
   onCreateConsultation: (values: PatientConsultationFormValues) => Promise<void>;
-  onSaveProfessionalProfile: (values: {
-    professionalTitle: string;
-    specialty: string;
-  }) => Promise<void>;
 }
 
 const BULLET = "\u2022 ";
-
-const historyLabels: Array<{ label: string; value: keyof ClinicalHistory }> = [
-  { label: "Motivo de consulta", value: "consultationReason" },
-  { label: "Objetivo", value: "objective" },
-  { label: "Patologias, antecedentes y cirugias", value: "pathologiesHistorySurgeries" },
-  { label: "Medicamentos y suplementos", value: "medicationsSupplements" },
-  { label: "Habitos alimentarios", value: "eatingHabits" },
-  { label: "Alergias e intolerancias", value: "allergiesIntolerances" },
-  { label: "Actividad fisica", value: "physicalActivity" },
-  { label: "Estres", value: "stress" },
-  { label: "Descanso", value: "sleep" },
-  { label: "Sistema digestivo", value: "digestiveSystem" },
-  { label: "Ciclos menstruales", value: "menstrualCycles" },
-  { label: "Otras observaciones", value: "otherObservations" },
-];
 
 function createEmptyCriterion(): ConsultationCriterionFormValue {
   return {
@@ -66,52 +51,31 @@ function parseBulletList(value: string) {
     .filter(Boolean);
 }
 
-function buildLegacyCriteria(history?: ClinicalHistory) {
-  if (!history) return [];
-
-  return historyLabels
-    .map((entry) => ({
-      label: entry.label,
-      content: history[entry.value],
-    }))
-    .filter((entry) => entry.content?.trim())
-    .map((entry, index) => ({
-      id: `legacy-${index}`,
-      label: entry.label,
-      content: entry.content,
-    }));
-}
-
 export default function ConsultationsSection({
   currentProfessionalProfile,
-  history,
   consultations,
   isSavingConsultation = false,
-  isSavingProfile = false,
   onCreateConsultation,
-  onSaveProfessionalProfile,
 }: ConsultationsSectionProps) {
-  const [profileValues, setProfileValues] = useState({
-    professionalTitle: currentProfessionalProfile?.professionalTitle ?? "",
-    specialty: currentProfessionalProfile?.specialty ?? "",
-  });
-  const [isNewConsultationOpen, setIsNewConsultationOpen] = useState(
-    consultations.length === 0,
-  );
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [formValues, setFormValues] = useState<PatientConsultationFormValues>({
     consultationType: "",
     notes: "",
     criteria: [],
   });
 
-  useEffect(() => {
-    setProfileValues({
-      professionalTitle: currentProfessionalProfile?.professionalTitle ?? "",
-      specialty: currentProfessionalProfile?.specialty ?? "",
-    });
-  }, [currentProfessionalProfile]);
+  const professionalSignature = useMemo(() => {
+    if (!currentProfessionalProfile) {
+      return "Profesional del equipo";
+    }
 
-  const legacyCriteria = useMemo(() => buildLegacyCriteria(history), [history]);
+    const parts = [
+      currentProfessionalProfile.fullName,
+      currentProfessionalProfile.specialty || currentProfessionalProfile.professionalTitle,
+    ].filter(Boolean);
+
+    return parts.join(" · ");
+  }, [currentProfessionalProfile]);
 
   const handleCriterionChange = (
     criterionId: string,
@@ -134,7 +98,6 @@ export default function ConsultationsSection({
   };
 
   const handleAddCriterion = () => {
-    setIsNewConsultationOpen(true);
     setFormValues((current) => ({
       ...current,
       criteria: [...current.criteria, createEmptyCriterion()],
@@ -148,8 +111,12 @@ export default function ConsultationsSection({
     }));
   };
 
-  const handleSaveProfile = async () => {
-    await onSaveProfessionalProfile(profileValues);
+  const resetForm = () => {
+    setFormValues({
+      consultationType: "",
+      notes: "",
+      criteria: [],
+    });
   };
 
   const handleCreateConsultation = async () => {
@@ -164,15 +131,9 @@ export default function ConsultationsSection({
     };
 
     await onCreateConsultation(payload);
-    setFormValues({
-      consultationType: "",
-      notes: "",
-      criteria: [],
-    });
-    setIsNewConsultationOpen(false);
+    resetForm();
+    setDialogOpen(false);
   };
-
-  const hasLegacyHistory = legacyCriteria.length > 0;
 
   return (
     <section className="rounded-[30px] border border-border/80 bg-[linear-gradient(180deg,rgba(251,248,228,0.92),rgba(243,238,211,0.94))] p-5 shadow-soft md:p-6">
@@ -188,12 +149,15 @@ export default function ConsultationsSection({
             <p className="text-xs text-muted-foreground">
               Cada evolucion queda firmada por profesional y fecha.
             </p>
+            <p className="mt-1 text-xs uppercase tracking-[0.12em] text-primary/75">
+              {professionalSignature}
+            </p>
           </div>
         </div>
 
         <button
           type="button"
-          onClick={() => setIsNewConsultationOpen((current) => !current)}
+          onClick={() => setDialogOpen(true)}
           className="inline-flex items-center justify-center gap-2 self-start rounded-full border border-border/80 bg-background/80 px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-accent"
         >
           <Plus className="h-4 w-4" />
@@ -201,62 +165,69 @@ export default function ConsultationsSection({
         </button>
       </div>
 
-      <div className="mb-6 rounded-[24px] border border-border/60 bg-background/65 p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Firma profesional
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Se usa para firmar cada consulta y seguimiento.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void handleSaveProfile()}
-            disabled={isSavingProfile}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+      <div className="space-y-5">
+        {consultations.map((consultation) => (
+          <article
+            key={consultation.id}
+            className="overflow-hidden rounded-[24px] border border-border/60 bg-background/72 shadow-[0_10px_28px_rgba(76,70,43,0.06)]"
           >
-            <Save className="h-4 w-4" />
-            {isSavingProfile ? "Guardando..." : "Guardar firma"}
-          </button>
-        </div>
+            <div className="flex flex-col gap-3 border-b border-border/60 bg-[rgba(196,228,243,0.72)] px-5 py-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-card-foreground">
+                  {formatDateTime(consultation.consultedAt)} - {consultation.authorName}
+                  {consultation.authorSpecialty
+                    ? ` (${consultation.authorSpecialty})`
+                    : ""}
+                </p>
+              </div>
+              <div className="self-start rounded-full border border-white/70 bg-white/50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-card-foreground">
+                {consultation.consultationType || "Consulta"}
+              </div>
+            </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">Profesional</label>
-            <input
-              value={profileValues.professionalTitle}
-              onChange={(event) =>
-                setProfileValues((current) => ({
-                  ...current,
-                  professionalTitle: event.target.value,
-                }))
-              }
-              placeholder="Ej. Lic. / Dra. / Dr."
-              className="crm-input"
-            />
-          </div>
+            <div className="space-y-5 px-5 py-5">
+              {consultation.criteria.map((criterion) => (
+                <div key={criterion.id}>
+                  <p className="mb-2 text-sm font-semibold text-card-foreground">
+                    {criterion.label}:
+                  </p>
+                  <div className="space-y-1 text-sm leading-6 text-muted-foreground">
+                    {parseBulletList(criterion.content).map((line) => (
+                      <p key={`${criterion.id}-${line}`}>{line}</p>
+                    ))}
+                  </div>
+                </div>
+              ))}
 
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">Especialidad</label>
-            <input
-              value={profileValues.specialty}
-              onChange={(event) =>
-                setProfileValues((current) => ({
-                  ...current,
-                  specialty: event.target.value,
-                }))
-              }
-              placeholder="Ej. Nutricion clinica"
-              className="crm-input"
-            />
+              {consultation.notes ? (
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-card-foreground">Detalle:</p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {consultation.notes}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </article>
+        ))}
+
+        {consultations.length === 0 ? (
+          <div className="rounded-2xl border border-border/60 bg-background/60 px-4 py-5 text-sm text-muted-foreground">
+            Aun no hay consultas cargadas para este paciente.
           </div>
-        </div>
+        ) : null}
       </div>
 
-      {isNewConsultationOpen ? (
-        <div className="mb-6 rounded-[24px] border border-border/60 bg-background/70 p-4">
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Nueva consulta</DialogTitle>
+            <DialogDescription>
+              Firma activa: {professionalSignature}. Agrega un tipo de consulta, criterios
+              dinamicos y un detalle libre si lo necesitas.
+            </DialogDescription>
+          </DialogHeader>
+
           <div className="grid gap-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-foreground">
@@ -279,7 +250,7 @@ export default function ConsultationsSection({
               <button
                 type="button"
                 onClick={handleAddCriterion}
-                className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/70 px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent"
+                className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent"
               >
                 <Plus className="h-4 w-4" />
                 Agregar criterio
@@ -336,7 +307,7 @@ export default function ConsultationsSection({
                   }))
                 }
                 placeholder="Agrega detalles libres de la consulta..."
-                rows={5}
+                rows={7}
                 className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-6 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-ring/30"
               />
             </div>
@@ -344,7 +315,10 @@ export default function ConsultationsSection({
             <div className="flex flex-wrap justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setIsNewConsultationOpen(false)}
+                onClick={() => {
+                  resetForm();
+                  setDialogOpen(false);
+                }}
                 className="rounded-full border border-border/80 bg-background/80 px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-accent"
               >
                 Cancelar
@@ -367,101 +341,8 @@ export default function ConsultationsSection({
               </button>
             </div>
           </div>
-        </div>
-      ) : null}
-
-      <div className="space-y-4">
-        {consultations.map((consultation) => (
-          <article
-            key={consultation.id}
-            className="overflow-hidden rounded-[24px] border border-border/60 bg-background/70 shadow-[0_10px_30px_rgba(76,70,43,0.06)]"
-          >
-            <div className="flex flex-col gap-2 border-b border-border/60 bg-[rgba(196,228,243,0.7)] px-5 py-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-card-foreground">
-                  {formatDateTime(consultation.consultedAt)} - {consultation.authorName}
-                  {consultation.authorSpecialty
-                    ? ` (${consultation.authorSpecialty})`
-                    : ""}
-                </p>
-                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-                  {consultation.authorProfessionalTitle || "Profesional"} ·{" "}
-                  {consultation.consultationType || "Consulta"}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4 px-5 py-5">
-              {consultation.consultationType ? (
-                <div>
-                  <p className="mb-1 text-sm font-semibold text-card-foreground">
-                    Tipo de consulta
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {consultation.consultationType}
-                  </p>
-                </div>
-              ) : null}
-
-              {consultation.criteria.map((criterion) => (
-                <div key={criterion.id}>
-                  <p className="mb-1 text-sm font-semibold uppercase tracking-[0.08em] text-card-foreground">
-                    {criterion.label}
-                  </p>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    {parseBulletList(criterion.content).map((line) => (
-                      <p key={`${criterion.id}-${line}`}>• {line}</p>
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              {consultation.notes ? (
-                <div>
-                  <p className="mb-1 text-sm font-semibold text-card-foreground">Detalle</p>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {consultation.notes}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </article>
-        ))}
-
-        {hasLegacyHistory ? (
-          <article className="overflow-hidden rounded-[24px] border border-border/60 bg-background/70 shadow-[0_10px_30px_rgba(76,70,43,0.06)]">
-            <div className="border-b border-border/60 bg-[rgba(251,239,207,0.7)] px-5 py-4">
-              <p className="text-sm font-semibold text-card-foreground">
-                Historia clinica previa
-              </p>
-              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-                Registro legacy conservado
-              </p>
-            </div>
-
-            <div className="space-y-4 px-5 py-5">
-              {legacyCriteria.map((criterion) => (
-                <div key={criterion.id}>
-                  <p className="mb-1 text-sm font-semibold uppercase tracking-[0.08em] text-card-foreground">
-                    {criterion.label}
-                  </p>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    {parseBulletList(criterion.content).map((line) => (
-                      <p key={`${criterion.id}-${line}`}>• {line}</p>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
-        ) : null}
-
-        {consultations.length === 0 && !hasLegacyHistory ? (
-          <div className="rounded-2xl border border-border/60 bg-background/60 px-4 py-5 text-sm text-muted-foreground">
-            Aun no hay consultas cargadas para este paciente.
-          </div>
-        ) : null}
-      </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

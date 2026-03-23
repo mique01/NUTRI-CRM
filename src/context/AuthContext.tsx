@@ -20,6 +20,7 @@ import {
   syncCurrentProfile,
   unlockSharedAccess,
 } from "@/services/auth";
+import { getProfessionalProfile } from "@/services/consultations";
 import {
   acceptMyClinicInvite,
   getCurrentClinicMembership,
@@ -32,6 +33,7 @@ import type {
   AuthUser,
   Clinic,
   ClinicMembership,
+  ProfessionalProfile,
   SharedAccessState,
 } from "@/types/domain";
 
@@ -42,6 +44,7 @@ interface AuthContextType {
   membership: ClinicMembership | null;
   accessStatus: AuthAccessStatus;
   accessState: AccessState | null;
+  currentProfessionalProfile: ProfessionalProfile | null;
   sharedAccessRequired: boolean;
   sharedAccessUnlocked: boolean;
   loading: boolean;
@@ -64,6 +67,7 @@ const emptyAuthState = {
   membership: null,
   accessStatus: "denied" as const,
   accessState: null,
+  currentProfessionalProfile: null,
   sharedAccessRequired: false,
   sharedAccessUnlocked: false,
 };
@@ -74,6 +78,7 @@ async function loadAuthContext(session: Session | null) {
   }
 
   await syncCurrentProfile(session.user);
+  const currentProfessionalProfile = await getProfessionalProfile(session.user.id);
   let membership = await getCurrentClinicMembership(session.user.id);
 
   if (membership) {
@@ -83,6 +88,7 @@ async function loadAuthContext(session: Session | null) {
       clinic: membership.clinic ?? null,
       membership,
       accessStatus: "member" as const,
+      currentProfessionalProfile,
       accessState: {
         status: "member",
         clinicId: membership.clinicId,
@@ -105,6 +111,7 @@ async function loadAuthContext(session: Session | null) {
       clinic: membership.clinic ?? null,
       membership,
       accessStatus: "member" as const,
+      currentProfessionalProfile,
       accessState: {
         status: "member",
         clinicId: membership.clinicId,
@@ -134,6 +141,7 @@ async function loadAuthContext(session: Session | null) {
       membership?.clinic != null
         ? ("member" as const)
         : accessState.status,
+    currentProfessionalProfile,
     accessState:
       membership?.clinic != null
         ? {
@@ -174,6 +182,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [membership, setMembership] = useState<ClinicMembership | null>(null);
   const [accessStatus, setAccessStatus] = useState<AuthAccessStatus>("denied");
   const [accessState, setAccessState] = useState<AccessState | null>(null);
+  const [currentProfessionalProfile, setCurrentProfessionalProfile] =
+    useState<ProfessionalProfile | null>(null);
   const [sharedAccessRequired, setSharedAccessRequired] = useState(false);
   const [sharedAccessUnlocked, setSharedAccessUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -185,6 +195,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setMembership(nextState.membership);
     setAccessStatus(nextState.accessStatus);
     setAccessState(nextState.accessState);
+    setCurrentProfessionalProfile(nextState.currentProfessionalProfile);
     setSharedAccessRequired(nextState.required);
     setSharedAccessUnlocked(nextState.unlocked);
   };
@@ -263,6 +274,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       membership,
       accessStatus,
       accessState,
+      currentProfessionalProfile,
       sharedAccessRequired,
       sharedAccessUnlocked,
       loading,
@@ -289,6 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       membership,
       accessStatus,
       accessState,
+      currentProfessionalProfile,
       sharedAccessRequired,
       sharedAccessUnlocked,
       loading,

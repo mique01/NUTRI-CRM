@@ -1,21 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { updateProfessionalProfile } from "@/services/consultations";
 
 const Unlock = () => {
-  const { clinic, unlockWithSharedPassword, logout, user } = useAuth();
+  const { clinic, currentProfessionalProfile, unlockWithSharedPassword, logout, user } =
+    useAuth();
   const [password, setPassword] = useState("");
+  const [professionalTitle, setProfessionalTitle] = useState("");
+  const [specialty, setSpecialty] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    setProfessionalTitle(currentProfessionalProfile?.professionalTitle ?? "");
+    setSpecialty(currentProfessionalProfile?.specialty ?? "");
+  }, [currentProfessionalProfile]);
+
+  const profileIsComplete = Boolean(professionalTitle.trim() && specialty.trim());
+
   const handleUnlock = async () => {
-    if (!password.trim()) {
+    if (!password.trim() || !profileIsComplete || !user?.id) {
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      await updateProfessionalProfile(user.id, {
+        professionalTitle,
+        specialty,
+      });
       await unlockWithSharedPassword(password);
       toast.success("Acceso habilitado correctamente.");
     } catch (error) {
@@ -38,17 +53,57 @@ const Unlock = () => {
             <LockKeyhole className="h-6 w-6 text-foreground" />
           </div>
           <h1 className="font-display text-4xl font-semibold leading-none text-foreground">
-            Desbloquear informacion
+            Completar ingreso
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {clinic?.name
               ? `Ingresaste como ${user?.email ?? "tu cuenta"} en ${clinic.name}.`
               : `Ingresaste como ${user?.email ?? "tu cuenta"}.`}{" "}
-            Para ver historias clinicas y pacientes, ingresa la contraseña compartida del equipo.
+            Completa tu firma profesional y luego ingresa la contraseña compartida del equipo.
           </p>
         </div>
 
         <div className="space-y-4">
+          <div className="rounded-[24px] border border-border/70 bg-background/55 p-4">
+            <p className="mb-3 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Firma profesional
+            </p>
+
+            <div className="grid gap-3">
+              <div>
+                <label
+                  htmlFor="professional-title"
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Profesional
+                </label>
+                <input
+                  id="professional-title"
+                  value={professionalTitle}
+                  onChange={(event) => setProfessionalTitle(event.target.value)}
+                  placeholder="Ej. Lic. / Dra. / Dr."
+                  className="crm-input"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="professional-specialty"
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Especialidad
+                </label>
+                <input
+                  id="professional-specialty"
+                  value={specialty}
+                  onChange={(event) => setSpecialty(event.target.value)}
+                  placeholder="Ej. Nutricion clinica"
+                  className="crm-input"
+                />
+              </div>
+            </div>
+          </div>
+
           <div>
             <label
               htmlFor="shared-access-password"
@@ -75,11 +130,11 @@ const Unlock = () => {
           <button
             type="button"
             onClick={() => void handleUnlock()}
-            disabled={isSubmitting || !password.trim()}
+            disabled={isSubmitting || !password.trim() || !profileIsComplete}
             className="flex w-full items-center justify-center gap-3 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <LockKeyhole className="h-4 w-4" />
-            {isSubmitting ? "Validando..." : "Ver informacion del CRM"}
+            {isSubmitting ? "Validando..." : "Entrar al CRM"}
           </button>
 
           <button
