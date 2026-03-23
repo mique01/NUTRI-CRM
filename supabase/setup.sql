@@ -56,6 +56,10 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+alter table if exists public.profiles
+  add column if not exists professional_title text,
+  add column if not exists specialty text;
+
 create table if not exists public.clinics (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -145,6 +149,19 @@ create table if not exists public.patient_clinical_histories (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.patient_consultations (
+  id uuid primary key default gen_random_uuid(),
+  clinic_id uuid not null references public.clinics(id) on delete cascade,
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  author_profile_id uuid references public.profiles(id) on delete set null,
+  consultation_type text not null default 'Consulta',
+  notes text not null default '',
+  criteria jsonb not null default '[]'::jsonb,
+  consulted_at timestamptz not null default timezone('utc', now()),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create table if not exists public.patient_notes (
   id uuid primary key default gen_random_uuid(),
   clinic_id uuid not null references public.clinics(id) on delete cascade,
@@ -214,6 +231,8 @@ create unique index if not exists access_requests_unique_pending_email
 create index if not exists clinic_memberships_profile_id_idx on public.clinic_memberships (profile_id);
 create index if not exists patients_clinic_id_idx on public.patients (clinic_id);
 create index if not exists patient_notes_patient_id_idx on public.patient_notes (patient_id, created_at desc);
+create index if not exists patient_consultations_patient_id_idx
+  on public.patient_consultations (patient_id, consulted_at desc);
 create index if not exists appointments_patient_id_idx on public.appointments (patient_id, starts_at asc);
 create index if not exists appointments_nutritionist_id_idx on public.appointments (nutritionist_profile_id, starts_at asc);
 create index if not exists appointments_clinic_id_starts_at_idx on public.appointments (clinic_id, starts_at asc);
@@ -300,6 +319,10 @@ for each row execute function public.set_updated_at();
 
 drop trigger if exists set_patient_clinical_histories_updated_at on public.patient_clinical_histories;
 create trigger set_patient_clinical_histories_updated_at before update on public.patient_clinical_histories
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_patient_consultations_updated_at on public.patient_consultations;
+create trigger set_patient_consultations_updated_at before update on public.patient_consultations
 for each row execute function public.set_updated_at();
 
 drop trigger if exists set_patient_notes_updated_at on public.patient_notes;
@@ -515,6 +538,25 @@ begin
   select jsonb_build_object(
     'patient',
     to_jsonb(patient_row),
+    'current_professional_profile',
+    coalesce(
+      (
+        select to_jsonb(profile_row)
+        from (
+          select
+            profiles.id,
+            profiles.email,
+            profiles.full_name,
+            profiles.professional_title,
+            profiles.specialty,
+            profiles.avatar_url
+          from public.profiles
+          where profiles.id = auth.uid()
+          limit 1
+        ) as profile_row
+      ),
+      'null'::jsonb
+    ),
     'history',
     coalesce(
       (
@@ -541,6 +583,33 @@ begin
         ) as history_row
       ),
       'null'::jsonb
+    ),
+    'consultations',
+    coalesce(
+      (
+        select jsonb_agg(to_jsonb(consultation_row) order by consultation_row.consulted_at desc)
+        from (
+          select
+            patient_consultations.id,
+            patient_consultations.clinic_id,
+            patient_consultations.patient_id,
+            patient_consultations.author_profile_id,
+            patient_consultations.consultation_type,
+            patient_consultations.notes,
+            patient_consultations.criteria,
+            patient_consultations.consulted_at,
+            patient_consultations.created_at,
+            coalesce(author_profiles.full_name, author_profiles.email, 'Profesional del equipo') as author_name,
+            coalesce(author_profiles.professional_title, '') as author_professional_title,
+            coalesce(author_profiles.specialty, '') as author_specialty
+          from public.patient_consultations
+          left join public.profiles as author_profiles
+            on author_profiles.id = patient_consultations.author_profile_id
+          where patient_consultations.patient_id = patient_row.id
+          order by patient_consultations.consulted_at desc
+        ) as consultation_row
+      ),
+      '[]'::jsonb
     ),
     'notes',
     coalesce(
@@ -1074,6 +1143,7 @@ alter table public.clinic_invites enable row level security;
 alter table public.access_requests enable row level security;
 alter table public.patients enable row level security;
 alter table public.patient_clinical_histories enable row level security;
+alter table public.patient_consultations enable row level security;
 alter table public.patient_notes enable row level security;
 alter table public.appointments enable row level security;
 alter table public.nutrition_plans enable row level security;
@@ -1083,6 +1153,20 @@ drop policy if exists "Profiles are viewable by owner" on public.profiles;
 create policy "Profiles are viewable by owner"
 on public.profiles for select
 using (auth.uid() = id);
+
+drop policy if exists "Profiles are viewable by same clinic" on public.profiles;
+create policy "Profiles are viewable by same clinic"
+on public.profiles for select
+using (
+  exists (
+    select 1
+    from public.clinic_memberships as current_membership
+    join public.clinic_memberships as target_membership
+      on target_membership.clinic_id = current_membership.clinic_id
+    where current_membership.profile_id = auth.uid()
+      and target_membership.profile_id = profiles.id
+  )
+);
 
 drop policy if exists "Profiles are insertable by owner" on public.profiles;
 create policy "Profiles are insertable by owner"
@@ -1212,6 +1296,12 @@ with check (
 drop policy if exists "Notes are manageable by clinic members" on public.patient_notes;
 create policy "Notes are manageable by clinic members"
 on public.patient_notes for all
+using (app.is_clinic_member(clinic_id))
+with check (app.is_clinic_member(clinic_id));
+
+drop policy if exists "Consultations are manageable by clinic members" on public.patient_consultations;
+create policy "Consultations are manageable by clinic members"
+on public.patient_consultations for all
 using (app.is_clinic_member(clinic_id))
 with check (app.is_clinic_member(clinic_id));
 

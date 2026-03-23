@@ -39,6 +39,15 @@ export interface SharedAccessState {
   unlocked: boolean;
 }
 
+export interface ProfessionalProfile {
+  id: string;
+  email: string;
+  fullName: string;
+  professionalTitle: string;
+  specialty: string;
+  avatarUrl: string | null;
+}
+
 export interface Patient {
   id: string;
   clinicId: string;
@@ -98,6 +107,39 @@ export interface ClinicalHistoryFormValues {
   digestiveSystem: string;
   menstrualCycles: string;
   otherObservations: string;
+}
+
+export interface ConsultationCriterion {
+  id: string;
+  label: string;
+  content: string;
+}
+
+export interface ConsultationCriterionFormValue {
+  id: string;
+  label: string;
+  content: string;
+}
+
+export interface PatientConsultation {
+  id: string;
+  clinicId: string;
+  patientId: string;
+  authorProfileId: string | null;
+  authorName: string;
+  authorProfessionalTitle: string;
+  authorSpecialty: string;
+  consultationType: string;
+  notes: string;
+  criteria: ConsultationCriterion[];
+  consultedAt: string;
+  createdAt: string;
+}
+
+export interface PatientConsultationFormValues {
+  consultationType: string;
+  notes: string;
+  criteria: ConsultationCriterionFormValue[];
 }
 
 export interface PatientNote {
@@ -171,6 +213,8 @@ export interface MedicalStudy {
 export interface PatientDetailBundle {
   patient: Patient;
   history: ClinicalHistory;
+  currentProfessionalProfile: ProfessionalProfile | null;
+  consultations: PatientConsultation[];
   notes: PatientNote[];
   appointments: Appointment[];
   nutritionPlans: NutritionPlan[];
@@ -211,6 +255,12 @@ export const emptyClinicalHistoryFormValues: ClinicalHistoryFormValues = {
   digestiveSystem: "",
   menstrualCycles: "",
   otherObservations: "",
+};
+
+export const emptyPatientConsultationFormValues: PatientConsultationFormValues = {
+  consultationType: "",
+  notes: "",
+  criteria: [],
 };
 
 export const emptyAppointmentFormValues: AppointmentFormValues = {

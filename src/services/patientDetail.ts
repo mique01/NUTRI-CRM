@@ -12,8 +12,10 @@ import {
   type MedicalStudy,
   type NutritionPlan,
   type Patient,
+  type PatientConsultation,
   type PatientDetailBundle,
   type PatientNote,
+  type ProfessionalProfile,
 } from "@/types/domain";
 
 function shouldFallbackToLegacyPatientBundle(error: unknown) {
@@ -148,6 +150,40 @@ function mapMedicalStudy(row: any): MedicalStudy {
   };
 }
 
+function mapProfessionalProfile(row: any): ProfessionalProfile {
+  return {
+    id: row.id,
+    email: row.email ?? "",
+    fullName: row.full_name ?? row.email ?? "",
+    professionalTitle: row.professional_title ?? "",
+    specialty: row.specialty ?? "",
+    avatarUrl: row.avatar_url ?? null,
+  };
+}
+
+function mapPatientConsultation(row: any): PatientConsultation {
+  return {
+    id: row.id,
+    clinicId: row.clinic_id,
+    patientId: row.patient_id,
+    authorProfileId: row.author_profile_id ?? null,
+    authorName: row.author_name ?? "Profesional del equipo",
+    authorProfessionalTitle: row.author_professional_title ?? "",
+    authorSpecialty: row.author_specialty ?? "",
+    consultationType: row.consultation_type ?? "",
+    notes: row.notes ?? "",
+    criteria: Array.isArray(row.criteria)
+      ? row.criteria.map((criterion: any, index: number) => ({
+          id: criterion.id ?? `${row.id}-${index}`,
+          label: criterion.label ?? "",
+          content: criterion.content ?? "",
+        }))
+      : [],
+    consultedAt: row.consulted_at ?? row.created_at,
+    createdAt: row.created_at,
+  };
+}
+
 export async function getPatientDetailBundle(
   patientId: string,
 ): Promise<PatientDetailBundle | null> {
@@ -175,6 +211,8 @@ export async function getPatientDetailBundle(
     return {
       patient,
       history,
+      currentProfessionalProfile: null,
+      consultations: [],
       notes,
       appointments,
       nutritionPlans,
@@ -193,6 +231,12 @@ export async function getPatientDetailBundle(
   return {
     patient: mapPatient(data.patient),
     history: mapClinicalHistory(data.history, patientId),
+    currentProfessionalProfile: data.current_professional_profile
+      ? mapProfessionalProfile(data.current_professional_profile)
+      : null,
+    consultations: Array.isArray(data.consultations)
+      ? data.consultations.map(mapPatientConsultation)
+      : [],
     notes: Array.isArray(data.notes) ? data.notes.map(mapPatientNote) : [],
     appointments: Array.isArray(data.appointments)
       ? data.appointments.map(mapAppointment)

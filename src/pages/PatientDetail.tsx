@@ -4,7 +4,7 @@ import { ArrowLeft, Mail, Pencil, Phone, Trash2, TriangleAlert } from "lucide-re
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
-import ClinicalHistorySection from "@/components/ClinicalHistorySection";
+import ConsultationsSection from "@/components/ConsultationsSection";
 import FileList from "@/components/FileList";
 import NotesSection from "@/components/NotesSection";
 import PatientFormDialog from "@/components/PatientFormDialog";
@@ -25,7 +25,10 @@ import {
 } from "@/hooks/use-crm-data";
 import { queryKeys } from "@/lib/queryKeys";
 import { formatDate, formatDateTime, getInitials } from "@/lib/utils";
-import { saveClinicalHistory } from "@/services/clinicalHistory";
+import {
+  createPatientConsultation,
+  updateProfessionalProfile,
+} from "@/services/consultations";
 import {
   deleteMedicalStudy,
   deleteNutritionPlan,
@@ -36,7 +39,7 @@ import {
 } from "@/services/files";
 import { createPatientNote, deletePatientNote } from "@/services/notes";
 import { deletePatient, updatePatient } from "@/services/patients";
-import type { ClinicalHistoryFormValues, PatientFormValues } from "@/types/domain";
+import type { PatientConsultationFormValues, PatientFormValues } from "@/types/domain";
 
 const PatientDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,7 +53,9 @@ const PatientDetail = () => {
   const patientDetailQuery = usePatientDetailQuery(id);
 
   const patient = patientDetailQuery.data?.patient ?? null;
+  const currentProfessionalProfile = patientDetailQuery.data?.currentProfessionalProfile ?? null;
   const history = patientDetailQuery.data?.history;
+  const consultations = patientDetailQuery.data?.consultations ?? [];
   const notes = patientDetailQuery.data?.notes ?? [];
   const appointments = patientDetailQuery.data?.appointments ?? [];
   const plans = patientDetailQuery.data?.nutritionPlans ?? [];
@@ -103,16 +108,30 @@ const PatientDetail = () => {
     },
   });
 
-  const saveHistoryMutation = useMutation({
-    mutationFn: (values: ClinicalHistoryFormValues) =>
-      saveClinicalHistory(id!, user!.id, values),
+  const updateProfessionalProfileMutation = useMutation({
+    mutationFn: (values: { professionalTitle: string; specialty: string }) =>
+      updateProfessionalProfile(user!.id, values),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
-      toast.success("Historia clinica guardada.");
+      toast.success("Firma profesional actualizada.");
     },
     onError: (error) => {
       toast.error(
-        error instanceof Error ? error.message : "No se pudo guardar la historia clinica.",
+        error instanceof Error ? error.message : "No se pudo actualizar el perfil profesional.",
+      );
+    },
+  });
+
+  const createConsultationMutation = useMutation({
+    mutationFn: (values: PatientConsultationFormValues) =>
+      createPatientConsultation(clinic!.id, id!, user!.id, values),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
+      toast.success("Consulta guardada.");
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo guardar la consulta.",
       );
     },
   });
@@ -429,10 +448,14 @@ const PatientDetail = () => {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_360px]">
           <div className="space-y-6">
-            <ClinicalHistorySection
+            <ConsultationsSection
+              currentProfessionalProfile={currentProfessionalProfile}
               history={history}
-              isSaving={saveHistoryMutation.isPending}
-              onSave={saveHistoryMutation.mutateAsync}
+              consultations={consultations}
+              isSavingConsultation={createConsultationMutation.isPending}
+              isSavingProfile={updateProfessionalProfileMutation.isPending}
+              onCreateConsultation={createConsultationMutation.mutateAsync}
+              onSaveProfessionalProfile={updateProfessionalProfileMutation.mutateAsync}
             />
           </div>
 
