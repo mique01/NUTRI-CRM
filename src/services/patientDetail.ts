@@ -168,7 +168,8 @@ function mapPatientConsultation(row: any): PatientConsultation {
     clinicId: row.clinic_id,
     patientId: row.patient_id,
     authorProfileId: row.author_profile_id ?? null,
-    authorName: row.author_name ?? "Profesional del equipo",
+    authorName:
+      row.author_professional_title ?? row.author_name ?? "Profesional del equipo",
     authorProfessionalTitle: row.author_professional_title ?? "",
     authorSpecialty: row.author_specialty ?? "",
     consultationType: row.consultation_type ?? "",

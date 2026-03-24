@@ -599,7 +599,7 @@ begin
             patient_consultations.criteria,
             patient_consultations.consulted_at,
             patient_consultations.created_at,
-            coalesce(author_profiles.full_name, author_profiles.email, 'Profesional del equipo') as author_name,
+            coalesce(author_profiles.professional_title, author_profiles.full_name, author_profiles.email, 'Profesional del equipo') as author_name,
             coalesce(author_profiles.professional_title, '') as author_professional_title,
             coalesce(author_profiles.specialty, '') as author_specialty
           from public.patient_consultations

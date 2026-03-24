@@ -1,7 +1,7 @@
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import type {
-  PatientConsultation,
   ConsultationCriterionFormValue,
+  PatientConsultation,
   PatientConsultationFormValues,
   ProfessionalProfile,
 } from "@/types/domain";
@@ -50,7 +50,11 @@ function mapPatientConsultation(row: any): PatientConsultation {
     clinicId: row.clinic_id,
     patientId: row.patient_id,
     authorProfileId: row.author_profile_id ?? null,
-    authorName: author?.full_name ?? author?.email ?? "Profesional del equipo",
+    authorName:
+      author?.professional_title ??
+      author?.full_name ??
+      author?.email ??
+      "Profesional del equipo",
     authorProfessionalTitle: author?.professional_title ?? "",
     authorSpecialty: author?.specialty ?? "",
     consultationType: row.consultation_type ?? "",

@@ -51,6 +51,31 @@ function parseBulletList(value: string) {
     .filter(Boolean);
 }
 
+function formatProfessionalSignature(profile: ProfessionalProfile | null) {
+  if (!profile) {
+    return "Profesional del equipo";
+  }
+
+  const displayName =
+    profile.professionalTitle.trim() ||
+    profile.fullName.trim() ||
+    profile.email.trim() ||
+    "Profesional del equipo";
+  const specialty = profile.specialty.trim();
+
+  return specialty ? `${displayName} (${specialty})` : displayName;
+}
+
+function formatConsultationSignature(consultation: PatientConsultation) {
+  const displayName =
+    consultation.authorProfessionalTitle.trim() ||
+    consultation.authorName.trim() ||
+    "Profesional del equipo";
+  const specialty = consultation.authorSpecialty.trim();
+
+  return specialty ? `${displayName} (${specialty})` : displayName;
+}
+
 export default function ConsultationsSection({
   currentProfessionalProfile,
   consultations,
@@ -65,16 +90,7 @@ export default function ConsultationsSection({
   });
 
   const professionalSignature = useMemo(() => {
-    if (!currentProfessionalProfile) {
-      return "Profesional del equipo";
-    }
-
-    const parts = [
-      currentProfessionalProfile.fullName,
-      currentProfessionalProfile.specialty || currentProfessionalProfile.professionalTitle,
-    ].filter(Boolean);
-
-    return parts.join(" · ");
+    return formatProfessionalSignature(currentProfessionalProfile);
   }, [currentProfessionalProfile]);
 
   const handleCriterionChange = (
@@ -174,10 +190,8 @@ export default function ConsultationsSection({
             <div className="flex flex-col gap-3 border-b border-border/60 bg-[rgba(196,228,243,0.72)] px-5 py-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-sm font-semibold text-card-foreground">
-                  {formatDateTime(consultation.consultedAt)} - {consultation.authorName}
-                  {consultation.authorSpecialty
-                    ? ` (${consultation.authorSpecialty})`
-                    : ""}
+                  {formatDateTime(consultation.consultedAt)} -{" "}
+                  {formatConsultationSignature(consultation)}
                 </p>
               </div>
               <div className="self-start rounded-full border border-white/70 bg-white/50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-card-foreground">
@@ -191,18 +205,18 @@ export default function ConsultationsSection({
                   <p className="mb-2 text-sm font-semibold text-card-foreground">
                     {criterion.label}:
                   </p>
-                  <div className="space-y-1 text-sm leading-6 text-muted-foreground">
+                  <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-muted-foreground">
                     {parseBulletList(criterion.content).map((line) => (
-                      <p key={`${criterion.id}-${line}`}>{line}</p>
+                      <li key={`${criterion.id}-${line}`}>{line}</li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               ))}
 
               {consultation.notes ? (
                 <div>
                   <p className="mb-2 text-sm font-semibold text-card-foreground">Detalle:</p>
-                  <p className="text-sm leading-6 text-muted-foreground">
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                     {consultation.notes}
                   </p>
                 </div>
@@ -219,100 +233,104 @@ export default function ConsultationsSection({
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Nueva consulta</DialogTitle>
-            <DialogDescription>
-              Firma activa: {professionalSignature}. Agrega un tipo de consulta, criterios
-              dinamicos y un detalle libre si lo necesitas.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-h-[88vh] max-w-3xl overflow-hidden p-0">
+          <div className="flex max-h-[88vh] flex-col">
+            <DialogHeader className="shrink-0 border-b border-border/60 px-6 pb-4 pt-6">
+              <DialogTitle>Nueva consulta</DialogTitle>
+              <DialogDescription>
+                La consulta se guardara firmada como {professionalSignature}. Agrega un tipo,
+                criterios y un detalle libre si lo necesitas.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="grid gap-4">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">
-                Tipo de consulta
-              </label>
-              <input
-                value={formValues.consultationType}
-                onChange={(event) =>
-                  setFormValues((current) => ({
-                    ...current,
-                    consultationType: event.target.value,
-                  }))
-                }
-                placeholder="Ej. Primera consulta, Seguimiento, Control"
-                className="crm-input"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={handleAddCriterion}
-                className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent"
-              >
-                <Plus className="h-4 w-4" />
-                Agregar criterio
-              </button>
-            </div>
-
-            {formValues.criteria.map((criterion) => (
-              <div
-                key={criterion.id}
-                className="rounded-[20px] border border-border/55 bg-card/70 p-4"
-              >
-                <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="grid gap-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    Tipo de consulta
+                  </label>
                   <input
-                    value={criterion.label}
+                    value={formValues.consultationType}
                     onChange={(event) =>
-                      handleCriterionChange(criterion.id, "label", event.target.value)
+                      setFormValues((current) => ({
+                        ...current,
+                        consultationType: event.target.value,
+                      }))
                     }
-                    placeholder="Ej. Actividad fisica"
-                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-ring/30"
+                    placeholder="Ej. Primera consulta, Seguimiento, Control"
+                    className="crm-input"
                   />
+                </div>
 
+                <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
-                    onClick={() => handleRemoveCriterion(criterion.id)}
-                    className="rounded-full border border-border/70 px-3 py-2 text-xs font-medium text-muted-foreground transition-all hover:bg-accent"
+                    onClick={handleAddCriterion}
+                    className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent"
                   >
-                    Quitar
+                    <Plus className="h-4 w-4" />
+                    Agregar criterio
                   </button>
                 </div>
 
-                <textarea
-                  value={criterion.content}
-                  onChange={(event) =>
-                    handleCriterionChange(criterion.id, "content", event.target.value)
-                  }
-                  onBlur={() => handleCriterionBlur(criterion.id)}
-                  placeholder="• "
-                  rows={Math.max(3, criterion.content.split("\n").length || 3)}
-                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-6 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-ring/30"
-                />
-              </div>
-            ))}
+                {formValues.criteria.map((criterion) => (
+                  <div
+                    key={criterion.id}
+                    className="rounded-[20px] border border-border/55 bg-card/70 p-4"
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <input
+                        value={criterion.label}
+                        onChange={(event) =>
+                          handleCriterionChange(criterion.id, "label", event.target.value)
+                        }
+                        placeholder="Ej. Actividad fisica"
+                        className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary/40 focus:ring-2 focus:ring-ring/30"
+                      />
 
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">
-                Notas / detalle
-              </label>
-              <textarea
-                value={formValues.notes}
-                onChange={(event) =>
-                  setFormValues((current) => ({
-                    ...current,
-                    notes: event.target.value,
-                  }))
-                }
-                placeholder="Agrega detalles libres de la consulta..."
-                rows={7}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-6 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-ring/30"
-              />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCriterion(criterion.id)}
+                        className="rounded-full border border-border/70 px-3 py-2 text-xs font-medium text-muted-foreground transition-all hover:bg-accent"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+
+                    <textarea
+                      value={criterion.content}
+                      onChange={(event) =>
+                        handleCriterionChange(criterion.id, "content", event.target.value)
+                      }
+                      onBlur={() => handleCriterionBlur(criterion.id)}
+                      placeholder="• "
+                      rows={4}
+                      className="max-h-44 min-h-[8.5rem] w-full overflow-y-auto rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-6 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-ring/30"
+                    />
+                  </div>
+                ))}
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    Notas / detalle
+                  </label>
+                  <textarea
+                    value={formValues.notes}
+                    onChange={(event) =>
+                      setFormValues((current) => ({
+                        ...current,
+                        notes: event.target.value,
+                      }))
+                    }
+                    placeholder="Agrega detalles libres de la consulta..."
+                    rows={6}
+                    className="max-h-56 min-h-[10rem] w-full overflow-y-auto rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-6 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary/40 focus:ring-2 focus:ring-ring/30"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap justify-end gap-3">
+            <div className="flex shrink-0 flex-wrap justify-end gap-3 border-t border-border/60 px-6 py-4">
               <button
                 type="button"
                 onClick={() => {

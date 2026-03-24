@@ -5,7 +5,7 @@ import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/context/AuthContext";
 
 const AppSidebar = () => {
-  const { user, clinic, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -21,10 +21,7 @@ const AppSidebar = () => {
     <aside className="hidden min-h-screen w-72 flex-col bg-sidebar px-6 py-7 md:flex">
       <div className="mb-12">
         <p className="font-display text-[2.5rem] font-semibold leading-none tracking-tight text-sidebar-foreground">
-          NutriCRM
-        </p>
-        <p className="mt-3 text-xs uppercase tracking-[0.24em] text-muted-foreground">
-          {clinic?.name ?? "Portal clinico"}
+          Consultorio
         </p>
       </div>
 

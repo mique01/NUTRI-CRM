@@ -75,13 +75,13 @@ const Unlock = () => {
                   htmlFor="professional-title"
                   className="mb-1.5 block text-sm font-medium text-foreground"
                 >
-                  Profesional
+                  Nombre para firma
                 </label>
                 <input
                   id="professional-title"
                   value={professionalTitle}
                   onChange={(event) => setProfessionalTitle(event.target.value)}
-                  placeholder="Ej. Lic. / Dra. / Dr."
+                  placeholder="Ej. Lic. De Torres Curth"
                   className="crm-input"
                 />
               </div>
