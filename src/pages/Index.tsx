@@ -1,7 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import AppLayout from "@/components/AppLayout";
-import { useDashboardConsultationsQuery } from "@/hooks/use-crm-data";
+import CalendarIntegrationPanel from "@/components/CalendarIntegrationPanel";
+import {
+  useCalendarIntegrationQuery,
+  useDashboardConsultationsQuery,
+} from "@/hooks/use-crm-data";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  connectAgendaPro,
+  disconnectCalendarIntegration,
+  startGoogleCalendarIntegration,
+} from "@/services/calendarIntegrations";
 import { cn } from "@/lib/utils";
 
 function getCalendarDays(referenceDate: Date) {
@@ -133,11 +146,69 @@ const timeFormatter = new Intl.DateTimeFormat("es-AR", {
 const Home = () => {
   const today = useMemo(() => new Date(), []);
   const dayAgendaRef = useRef<HTMLElement | null>(null);
+  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
   const [selectedDate, setSelectedDate] = useState(() => today);
-  const consultationsQuery = useDashboardConsultationsQuery(visibleMonth);
+  const integrationQuery = useCalendarIntegrationQuery();
+  const consultationsQuery = useDashboardConsultationsQuery(
+    visibleMonth,
+    integrationQuery.data,
+  );
+
+  const invalidateCalendarQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.calendarIntegration,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard", "consultations"],
+      }),
+    ]);
+  }, [queryClient]);
+
+  const agendaProMutation = useMutation({
+    mutationFn: connectAgendaPro,
+    onSuccess: async () => {
+      toast.success("AgendaPro quedó conectado para esta profesional.");
+      await invalidateCalendarQueries();
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No pudimos conectar AgendaPro.",
+      );
+    },
+  });
+
+  const googleMutation = useMutation({
+    mutationFn: startGoogleCalendarIntegration,
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No pudimos iniciar la conexión con Google Calendar.",
+      );
+    },
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: disconnectCalendarIntegration,
+    onSuccess: async () => {
+      toast.success("Volviste a la agenda interna del panel.");
+      await invalidateCalendarQueries();
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No pudimos desconectar la agenda externa.",
+      );
+    },
+  });
 
   useEffect(() => {
     setSelectedDate((current) => {
@@ -151,6 +222,28 @@ const Home = () => {
       return new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
     });
   }, [visibleMonth]);
+
+  useEffect(() => {
+    const calendarState = searchParams.get("calendar");
+
+    if (!calendarState) {
+      return;
+    }
+
+    if (calendarState === "google-connected") {
+      toast.success("Google Calendar quedó conectado correctamente.");
+      void invalidateCalendarQueries();
+    }
+
+    if (calendarState === "google-error") {
+      toast.error(
+        searchParams.get("message") ??
+          "No pudimos completar la conexión con Google Calendar.",
+      );
+    }
+
+    setSearchParams({}, { replace: true });
+  }, [invalidateCalendarQueries, searchParams, setSearchParams]);
 
   const monthLabel = capitalizeLabel(monthFormatter.format(visibleMonth));
   const yearLabel = yearFormatter.format(visibleMonth);
@@ -248,7 +341,13 @@ const Home = () => {
                   Agenda activa
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Selecciona un dia para ver el detalle.
+                  {integrationQuery.data?.connected
+                    ? `Mostrando ${
+                        integrationQuery.data.provider === "google_calendar"
+                          ? "Google Calendar"
+                          : "AgendaPro"
+                      }.`
+                    : "Selecciona un dia para ver el detalle."}
                 </p>
               </div>
               <div className="rounded-2xl bg-primary/12 px-3 py-2 text-sm font-semibold text-primary">
@@ -256,6 +355,16 @@ const Home = () => {
               </div>
             </div>
           </div>
+
+          <CalendarIntegrationPanel
+            integrationSummary={integrationQuery.data ?? null}
+            isConnectingGoogle={googleMutation.isPending}
+            isSavingAgendaPro={agendaProMutation.isPending}
+            isDisconnecting={disconnectMutation.isPending}
+            onStartGoogle={() => void googleMutation.mutateAsync()}
+            onSaveAgendaPro={(values) => void agendaProMutation.mutateAsync(values)}
+            onDisconnect={() => void disconnectMutation.mutateAsync()}
+          />
 
           <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
             <section className="rounded-[34px] border border-[#6d755f]/60 bg-[linear-gradient(180deg,rgba(250,247,221,0.9),rgba(244,240,214,0.95))] p-5 shadow-[0_16px_36px_rgba(91,88,66,0.12)] md:p-6">

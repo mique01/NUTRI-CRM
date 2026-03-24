@@ -2,9 +2,10 @@ export type ClinicMembershipRole = "admin" | "nutritionist";
 export type PatientStatus = "active" | "inactive";
 export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no_show";
 export type StudyFileType = "pdf" | "image";
-export type ExternalProvider = "google_calendar" | null;
+export type ExternalProvider = "google_calendar" | "agendapro" | null;
 export type SyncState = "not_connected" | "local_only" | "synced" | "sync_error";
 export type AuthAccessStatus = "member" | "pending_bootstrap" | "denied";
+export type CalendarFeedProvider = "local" | "google_calendar" | "agendapro";
 
 export interface AuthUser {
   id: string;
@@ -168,10 +169,31 @@ export interface Appointment {
 
 export interface DashboardConsultation {
   id: string;
-  patientId: string;
+  patientId: string | null;
   patientName: string;
   startsAt: string;
+  endsAt: string | null;
   status: AppointmentStatus;
+  sourceProvider: CalendarFeedProvider;
+}
+
+export interface CalendarIntegrationSummary {
+  provider: CalendarFeedProvider;
+  connected: boolean;
+  status: SyncState;
+  googleConnected: boolean;
+  agendaProConnected: boolean;
+  agendaProUsername: string | null;
+  agendaProLocationId: string | null;
+  agendaProProviderId: string | null;
+  lastSyncAt: string | null;
+}
+
+export interface AgendaProIntegrationFormValues {
+  username: string;
+  password: string;
+  locationId: string;
+  providerId: string;
 }
 
 export interface AppointmentFormValues {

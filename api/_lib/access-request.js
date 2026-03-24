@@ -204,7 +204,7 @@ export function renderApprovalPage({ title, message, tone = "neutral" }) {
   <body>
     <div class="wrap">
       <section class="card">
-        <span class="badge">NutriCRM</span>
+        <span class="badge">Consultorio</span>
         <h1>${title}</h1>
         <p>${message}</p>
       </section>

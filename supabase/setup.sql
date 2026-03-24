@@ -37,6 +37,13 @@ begin
   end if;
 end $$;
 
+do $$
+begin
+  alter type public.external_provider add value if not exists 'agendapro';
+exception
+  when duplicate_object then null;
+end $$;
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -189,6 +196,24 @@ create table if not exists public.appointments (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.professional_calendar_integrations (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null unique references public.profiles(id) on delete cascade,
+  provider public.external_provider not null,
+  status public.sync_state not null default 'not_connected',
+  google_refresh_token text,
+  google_access_token text,
+  google_token_expires_at timestamptz,
+  google_calendar_id text,
+  agendapro_username text,
+  agendapro_password text,
+  agendapro_location_id text,
+  agendapro_provider_id text,
+  last_synced_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create table if not exists public.nutrition_plans (
   id uuid primary key default gen_random_uuid(),
   clinic_id uuid not null references public.clinics(id) on delete cascade,
@@ -331,6 +356,10 @@ for each row execute function public.set_updated_at();
 
 drop trigger if exists set_appointments_updated_at on public.appointments;
 create trigger set_appointments_updated_at before update on public.appointments
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_professional_calendar_integrations_updated_at on public.professional_calendar_integrations;
+create trigger set_professional_calendar_integrations_updated_at before update on public.professional_calendar_integrations
 for each row execute function public.set_updated_at();
 
 drop trigger if exists set_nutrition_plans_updated_at on public.nutrition_plans;
@@ -1134,6 +1163,7 @@ grant execute on function public.try_accept_supabase_auth_invite() to anon, auth
 grant execute on function public.list_patients_overview() to authenticated, service_role;
 grant execute on function public.list_dashboard_consultations(timestamptz, timestamptz) to authenticated, service_role;
 grant execute on function public.get_patient_detail_bundle(uuid) to authenticated, service_role;
+grant select, insert, update, delete on public.professional_calendar_integrations to service_role;
 notify pgrst, 'reload schema';
 
 alter table public.profiles enable row level security;
@@ -1146,6 +1176,7 @@ alter table public.patient_clinical_histories enable row level security;
 alter table public.patient_consultations enable row level security;
 alter table public.patient_notes enable row level security;
 alter table public.appointments enable row level security;
+alter table public.professional_calendar_integrations enable row level security;
 alter table public.nutrition_plans enable row level security;
 alter table public.medical_studies enable row level security;
 

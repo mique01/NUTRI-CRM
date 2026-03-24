@@ -1,11 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
 import { listDashboardConsultations, listPatientAppointments } from "@/services/appointments";
+import {
+  getCalendarIntegrationSummary,
+  listDashboardSchedule,
+} from "@/services/calendarIntegrations";
 import { getClinicalHistory } from "@/services/clinicalHistory";
 import { listMedicalStudies, listNutritionPlans } from "@/services/files";
 import { getPatientDetailBundle } from "@/services/patientDetail";
 import { getPatientById, listPatients } from "@/services/patients";
 import { listPatientNotes } from "@/services/notes";
+import type { CalendarIntegrationSummary } from "@/types/domain";
 
 export function usePatientsQuery() {
   return useQuery({
@@ -14,12 +19,26 @@ export function usePatientsQuery() {
   });
 }
 
-export function useDashboardConsultationsQuery(monthDate: Date) {
+export function useCalendarIntegrationQuery() {
+  return useQuery({
+    queryKey: queryKeys.calendarIntegration,
+    queryFn: getCalendarIntegrationSummary,
+  });
+}
+
+export function useDashboardConsultationsQuery(
+  monthDate: Date,
+  integrationSummary: CalendarIntegrationSummary | null | undefined,
+) {
   const monthKey = `${monthDate.getFullYear()}-${monthDate.getMonth() + 1}`;
+  const providerKey = `${integrationSummary?.provider ?? "local"}:${
+    integrationSummary?.connected ? "connected" : "disconnected"
+  }`;
 
   return useQuery({
-    queryKey: queryKeys.dashboardConsultations(monthKey),
-    queryFn: () => listDashboardConsultations(monthDate),
+    queryKey: queryKeys.dashboardConsultations(monthKey, providerKey),
+    queryFn: () => listDashboardSchedule(monthDate, integrationSummary ?? null),
+    enabled: integrationSummary !== undefined,
   });
 }
 

@@ -145,10 +145,12 @@ export async function listDashboardConsultations(monthDate = new Date()) {
 
       return {
         id: row.id,
-        patientId: row.patient_id,
+        patientId: row.patient_id ?? null,
         patientName: row.patient_name ?? `${patient?.first_name ?? ""} ${patient?.last_name ?? ""}`.trim(),
         startsAt: row.starts_at,
+        endsAt: null,
         status: row.status,
+        sourceProvider: "local",
       };
     },
   );
