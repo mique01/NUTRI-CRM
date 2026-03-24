@@ -78,13 +78,13 @@ const Patients = () => {
         <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="crm-panel p-4 md:p-5">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar pacientes por nombre..."
-                className="crm-input pl-11"
+                className="crm-input pl-14"
               />
             </div>
           </div>
