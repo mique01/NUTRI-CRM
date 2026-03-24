@@ -84,7 +84,7 @@ const Patients = () => {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar pacientes por nombre..."
-                className="crm-input pl-14"
+                className="w-full rounded-[20px] border border-border/80 bg-background/80 py-3 pl-14 pr-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary/35 focus:ring-2 focus:ring-ring/15"
               />
             </div>
           </div>
