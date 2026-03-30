@@ -1,4 +1,4 @@
-import { useRef, type ChangeEvent } from "react";
+import { useRef, type ChangeEvent, type ReactNode } from "react";
 import { FileText, Folder, Image, Trash2, Upload } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -14,6 +14,7 @@ interface FileListProps {
   items: FileListItem[];
   uploadLabel: string;
   uploadStatusLabel?: string;
+  helperText?: ReactNode;
   emptyMessage: string;
   accept?: string;
   isUploading?: boolean;
@@ -27,6 +28,7 @@ const FileList = ({
   items,
   uploadLabel,
   uploadStatusLabel,
+  helperText,
   emptyMessage,
   accept,
   isUploading = false,
@@ -118,6 +120,12 @@ const FileList = ({
         <Upload className="mr-2 inline h-3.5 w-3.5" />
         {isUploading ? uploadStatusLabel ?? "Subiendo archivo..." : uploadLabel}
       </button>
+
+      {helperText ? (
+        <div className="mt-3 rounded-2xl border border-border/60 bg-background/55 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+          {helperText}
+        </div>
+      ) : null}
     </div>
   );
 };

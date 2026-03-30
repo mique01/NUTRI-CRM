@@ -425,6 +425,20 @@ const PatientDetail = () => {
               }))}
               uploadLabel="Subir plan PDF"
               uploadStatusLabel={planUploadStatus ?? undefined}
+              helperText={
+                <>
+                  Maximo PDF de 4.5 MB. Si pesa mas, comprimilo antes en{" "}
+                  <a
+                    href="https://www.ilovepdf.com/compress_pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
+                    iLovePDF
+                  </a>
+                  .
+                </>
+              }
               emptyMessage="Sin planes cargados todavia"
               accept=".pdf,application/pdf"
               isUploading={uploadPlanMutation.isPending}
@@ -443,6 +457,20 @@ const PatientDetail = () => {
               }))}
               uploadLabel="Subir estudio"
               uploadStatusLabel={studyUploadStatus ?? undefined}
+              helperText={
+                <>
+                  Si subis un PDF, el maximo es 4.5 MB. Si pesa mas, comprimilo antes en{" "}
+                  <a
+                    href="https://www.ilovepdf.com/compress_pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
+                    iLovePDF
+                  </a>
+                  .
+                </>
+              }
               emptyMessage="Sin estudios cargados todavia"
               accept=".pdf,image/*"
               isUploading={uploadStudyMutation.isPending}
