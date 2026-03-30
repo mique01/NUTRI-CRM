@@ -121,7 +121,7 @@ const PatientDetail = () => {
       uploadNutritionPlan(clinic!.id, id!, user!.id, file, setPlanUploadStatus),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
-      toast.success("Plan alimenticio subido.");
+      toast.success("Plan alimentario subido.");
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "No se pudo subir el archivo.");
@@ -139,7 +139,7 @@ const PatientDetail = () => {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.patientDetail(id!) });
-      toast.success("Plan alimenticio eliminado.");
+      toast.success("Plan alimentario eliminado.");
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "No se pudo eliminar el plan.");
@@ -416,7 +416,7 @@ const PatientDetail = () => {
 
           <div className="space-y-6">
             <FileList
-              title="Planes alimenticios"
+              title="Planes alimentarios"
               items={plans.map((plan) => ({
                 id: plan.id,
                 title: plan.title,

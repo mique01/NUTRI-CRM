@@ -96,7 +96,18 @@ async function compressPdf(file: File, onStatusChange?: UploadStatusHandler) {
   });
 
   if (!response.ok) {
-    throw new Error("No pudimos comprimir el PDF.");
+    let message = "No pudimos comprimir el PDF.";
+
+    try {
+      const payload = await response.json();
+      if (typeof payload?.details === "string" && payload.details.trim().length > 0) {
+        message = `${message} ${payload.details}`;
+      }
+    } catch {
+      // Ignore JSON parsing errors and keep the generic message.
+    }
+
+    throw new Error(message);
   }
 
   const blob = await response.blob();

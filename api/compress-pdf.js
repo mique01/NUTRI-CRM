@@ -44,6 +44,39 @@ function parseMultipartForm(req) {
   });
 }
 
+function getCompressionErrorMessage(error) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Unknown compression error";
+}
+
+async function compressWithRetry(buffer, fileName, publicKey, secretKey) {
+  const compressionLevels = ["recommended", "extreme", "low"];
+  const failures = [];
+
+  for (const compressionLevel of compressionLevels) {
+    try {
+      const client = new ILovePDFApi(publicKey, secretKey);
+      const task = client.newTask("compress");
+
+      await task.start();
+      await task.addFile(ILovePDFFile.fromArray(buffer, fileName));
+      await task.process({ compression_level: compressionLevel });
+
+      const compressedFile = await task.download();
+      return Buffer.isBuffer(compressedFile)
+        ? compressedFile
+        : Buffer.from(compressedFile);
+    } catch (error) {
+      failures.push(`${compressionLevel}: ${getCompressionErrorMessage(error)}`);
+    }
+  }
+
+  throw new Error(failures.join(" | "));
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -72,26 +105,16 @@ export default async function handler(req, res) {
     if (!publicKey || !secretKey) {
       throw new Error("Missing iLovePDF credentials");
     }
-
-    const client = new ILovePDFApi(publicKey, secretKey);
-    const task = client.newTask("compress");
-
-    await task.start();
-    await task.addFile(ILovePDFFile.fromArray(buffer, fileName));
-    await task.process({
-      compression_level: "extreme",
-    });
-
-    const compressedFile = await task.download();
-    const outputBuffer = Buffer.isBuffer(compressedFile)
-      ? compressedFile
-      : Buffer.from(compressedFile);
+    const outputBuffer = await compressWithRetry(buffer, fileName, publicKey, secretKey);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
     res.status(200).send(outputBuffer);
   } catch (error) {
     console.error("compress-pdf failed", error);
-    res.status(500).json({ error: "No pudimos comprimir el PDF." });
+    res.status(500).json({
+      error: "No pudimos comprimir el PDF.",
+      details: getCompressionErrorMessage(error),
+    });
   }
 }
