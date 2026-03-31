@@ -2,6 +2,7 @@ import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
 import { listDashboardConsultations } from "@/services/appointments";
 import type {
   AgendaProIntegrationFormValues,
+  Appointment,
   CalendarIntegrationSummary,
   DashboardConsultation,
 } from "@/types/domain";
@@ -74,6 +75,7 @@ function mapDashboardConsultation(payload: any): DashboardConsultation {
     endsAt: payload.endsAt ?? null,
     status: payload.status ?? "scheduled",
     sourceProvider: payload.sourceProvider ?? "local",
+    eventTitle: payload.eventTitle ?? null,
   };
 }
 
@@ -118,6 +120,58 @@ export async function listExternalDashboardConsultations(monthDate = new Date())
 
   return Array.isArray(payload?.items)
     ? payload.items.map(mapDashboardConsultation)
+    : [];
+}
+
+function getExternalAppointmentLabel(consultation: DashboardConsultation) {
+  if (consultation.eventTitle?.trim()) {
+    return consultation.eventTitle.trim();
+  }
+
+  return consultation.sourceProvider === "google_calendar"
+    ? "Turno de Google Calendar"
+    : "Turno de AgendaPro";
+}
+
+function mapExternalConsultationToAppointment(
+  patientId: string,
+  consultation: DashboardConsultation,
+): Appointment {
+  return {
+    id: `${consultation.sourceProvider}:${consultation.id}`,
+    clinicId: "",
+    patientId,
+    nutritionistProfileId: "",
+    startsAt: consultation.startsAt,
+    endsAt: consultation.endsAt ?? consultation.startsAt,
+    appointmentType: getExternalAppointmentLabel(consultation),
+    notes:
+      consultation.sourceProvider === "google_calendar"
+        ? "Turno sincronizado desde Google Calendar."
+        : "Turno sincronizado desde AgendaPro.",
+    status: consultation.status,
+    externalProvider:
+      consultation.sourceProvider === "local" ? null : consultation.sourceProvider,
+    externalEventId: consultation.id,
+    syncState: consultation.sourceProvider === "local" ? "local_only" : "synced",
+  };
+}
+
+export async function listExternalPatientAppointments(patientId: string) {
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - 12);
+
+  const endDate = new Date();
+  endDate.setMonth(endDate.getMonth() + 12);
+
+  const payload = await requestCalendarApi<{ items: DashboardConsultation[] }>(
+    `/api/calendar/events?start=${encodeURIComponent(startDate.toISOString())}&end=${encodeURIComponent(endDate.toISOString())}&patientId=${encodeURIComponent(patientId)}`,
+  );
+
+  return Array.isArray(payload?.items)
+    ? payload.items.map(mapDashboardConsultation).map((consultation) =>
+        mapExternalConsultationToAppointment(patientId, consultation),
+      )
     : [];
 }
 

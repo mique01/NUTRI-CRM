@@ -1,4 +1,5 @@
 import { assertSupabaseConfigured, supabase } from "@/lib/supabase";
+import { listExternalPatientAppointments } from "@/services/calendarIntegrations";
 import { calculateAge } from "@/lib/utils";
 import { listPatientAppointments } from "@/services/appointments";
 import { getClinicalHistory } from "@/services/clinicalHistory";
@@ -186,6 +187,35 @@ function mapPatientConsultation(row: any): PatientConsultation {
   };
 }
 
+function getAppointmentIdentity(appointment: Appointment) {
+  if (appointment.externalProvider && appointment.externalEventId) {
+    return `${appointment.externalProvider}:${appointment.externalEventId}`;
+  }
+
+  return `local:${appointment.id}`;
+}
+
+function mergeAppointments(localAppointments: Appointment[], externalAppointments: Appointment[]) {
+  const merged = new Map<string, Appointment>();
+
+  [...externalAppointments, ...localAppointments].forEach((appointment) => {
+    merged.set(getAppointmentIdentity(appointment), appointment);
+  });
+
+  return Array.from(merged.values()).sort(
+    (left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
+  );
+}
+
+async function listExternalAppointmentsSafe(patientId: string) {
+  try {
+    return await listExternalPatientAppointments(patientId);
+  } catch (error) {
+    console.error("No pudimos sincronizar turnos externos para el paciente.", error);
+    return [];
+  }
+}
+
 export async function getPatientDetailBundle(
   patientId: string,
 ): Promise<PatientDetailBundle | null> {
@@ -211,13 +241,15 @@ export async function getPatientDetailBundle(
       return null;
     }
 
+    const externalAppointments = await listExternalAppointmentsSafe(patient.id);
+
     return {
       patient,
       history,
       currentProfessionalProfile: null,
       consultations,
       notes,
-      appointments,
+      appointments: mergeAppointments(appointments, externalAppointments),
       nutritionPlans,
       medicalStudies,
     };
@@ -231,6 +263,8 @@ export async function getPatientDetailBundle(
     return null;
   }
 
+  const externalAppointments = await listExternalAppointmentsSafe(patientId);
+
   return {
     patient: mapPatient(data.patient),
     history: mapClinicalHistory(data.history, patientId),
@@ -241,9 +275,10 @@ export async function getPatientDetailBundle(
       ? data.consultations.map(mapPatientConsultation)
       : [],
     notes: Array.isArray(data.notes) ? data.notes.map(mapPatientNote) : [],
-    appointments: Array.isArray(data.appointments)
-      ? data.appointments.map(mapAppointment)
-      : [],
+    appointments: mergeAppointments(
+      Array.isArray(data.appointments) ? data.appointments.map(mapAppointment) : [],
+      externalAppointments,
+    ),
     nutritionPlans: Array.isArray(data.nutrition_plans)
       ? data.nutrition_plans.map(mapNutritionPlan)
       : [],

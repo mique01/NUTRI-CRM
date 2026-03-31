@@ -1,7 +1,9 @@
 import {
   getCalendarIntegration,
+  listClinicPatients,
   listAgendaProEvents,
   listGoogleCalendarEvents,
+  matchCalendarItemsToPatients,
   requireCalendarRequest,
   upsertCalendarIntegration,
 } from "../_lib/calendar-integrations.js";
@@ -13,9 +15,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { serviceClient, user } = await requireCalendarRequest(req);
+    const { serviceClient, user, membership } = await requireCalendarRequest(req);
     const startIso = String(req.query.start ?? "");
     const endIso = String(req.query.end ?? "");
+    const patientId = String(req.query.patientId ?? "").trim();
 
     if (!startIso || !endIso) {
       return res.status(400).json({
@@ -29,7 +32,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ items: [] });
     }
 
-    const items =
+    const rawItems =
       integration.provider === "google_calendar"
         ? await listGoogleCalendarEvents(serviceClient, integration, {
             startIso,
@@ -39,6 +42,10 @@ export default async function handler(req, res) {
             startIso,
             endIso,
           });
+    const patients = await listClinicPatients(serviceClient, membership.clinic_id);
+    const items = matchCalendarItemsToPatients(rawItems, patients).filter((item) =>
+      patientId ? item.patientId === patientId : true,
+    );
 
     await upsertCalendarIntegration(serviceClient, user.id, {
       provider: integration.provider,

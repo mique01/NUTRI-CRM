@@ -175,6 +175,7 @@ export interface DashboardConsultation {
   endsAt: string | null;
   status: AppointmentStatus;
   sourceProvider: CalendarFeedProvider;
+  eventTitle?: string | null;
 }
 
 export interface CalendarIntegrationSummary {

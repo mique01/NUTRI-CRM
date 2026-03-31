@@ -4,6 +4,7 @@ import {
   getAuthenticatedUser,
   getBaseUrl,
   getMembership,
+  normalizeEmail,
 } from "./access-request.js";
 
 const GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
@@ -361,6 +362,157 @@ function getFirstValue(row, paths) {
   return null;
 }
 
+function normalizeLooseText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9@.\s]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenizeName(value) {
+  return normalizeLooseText(value)
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2);
+}
+
+function extractEmails(value) {
+  const matches = String(value ?? "")
+    .toLowerCase()
+    .match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g);
+
+  return Array.from(new Set((matches ?? []).map((email) => normalizeEmail(email))));
+}
+
+export async function listClinicPatients(serviceClient, clinicId) {
+  const { data, error } = await serviceClient
+    .from("patients")
+    .select("id, first_name, last_name, email")
+    .eq("clinic_id", clinicId);
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+function buildPatientDisplayName(patient) {
+  return `${patient.first_name ?? ""} ${patient.last_name ?? ""}`.trim() || "Paciente";
+}
+
+function findPatientByEmail(item, patients) {
+  const candidateEmails = Array.isArray(item.candidateEmails)
+    ? item.candidateEmails.map((email) => normalizeEmail(email)).filter(Boolean)
+    : [];
+
+  if (candidateEmails.length === 0) {
+    return null;
+  }
+
+  const patientByEmail = new Map();
+
+  patients.forEach((patient) => {
+    const email = normalizeEmail(patient.email);
+    if (!email) return;
+
+    const existing = patientByEmail.get(email);
+    if (!existing) {
+      patientByEmail.set(email, [patient]);
+      return;
+    }
+
+    existing.push(patient);
+  });
+
+  for (const email of candidateEmails) {
+    const matches = patientByEmail.get(email) ?? [];
+
+    if (matches.length === 1) {
+      return matches[0];
+    }
+  }
+
+  return null;
+}
+
+function findPatientByName(item, patients) {
+  const matchingText = normalizeLooseText(
+    [item.patientName, item.eventTitle, item.matchingText].filter(Boolean).join(" "),
+  );
+
+  if (!matchingText) {
+    return null;
+  }
+
+  let bestMatch = null;
+  let bestScore = 0;
+  let isTie = false;
+
+  patients.forEach((patient) => {
+    const fullName = buildPatientDisplayName(patient);
+    const normalizedFullName = normalizeLooseText(fullName);
+    const normalizedReversedName = normalizeLooseText(
+      `${patient.last_name ?? ""} ${patient.first_name ?? ""}`,
+    );
+    const nameTokens = tokenizeName(fullName);
+
+    if (nameTokens.length < 2) {
+      return;
+    }
+
+    const hasAllTokens = nameTokens.every((token) => matchingText.includes(token));
+
+    if (!hasAllTokens) {
+      return;
+    }
+
+    let score = nameTokens.reduce((total, token) => total + token.length, 0);
+
+    if (matchingText.includes(normalizedFullName)) {
+      score += 100;
+    }
+
+    if (matchingText.includes(normalizedReversedName)) {
+      score += 80;
+    }
+
+    if (score > bestScore) {
+      bestMatch = patient;
+      bestScore = score;
+      isTie = false;
+      return;
+    }
+
+    if (score === bestScore) {
+      isTie = true;
+    }
+  });
+
+  return isTie ? null : bestMatch;
+}
+
+export function matchCalendarItemsToPatients(items, patients) {
+  return items.map((item) => {
+    const matchedPatient =
+      findPatientByEmail(item, patients) ?? findPatientByName(item, patients);
+
+    return {
+      id: item.id,
+      patientId: matchedPatient?.id ?? null,
+      patientName: matchedPatient ? buildPatientDisplayName(matchedPatient) : item.patientName,
+      startsAt: item.startsAt,
+      endsAt: item.endsAt,
+      status: item.status,
+      sourceProvider: item.sourceProvider,
+      eventTitle: item.eventTitle ?? null,
+    };
+  });
+}
+
 function mapGoogleEvent(event) {
   const startsAt = resolveIsoDate(event?.start?.dateTime ?? event?.start?.date);
 
@@ -368,14 +520,29 @@ function mapGoogleEvent(event) {
     return null;
   }
 
+  const summary = event.summary?.trim() || "Evento de Google Calendar";
+  const candidateEmails = Array.from(
+    new Set([
+      ...extractEmails(summary),
+      ...extractEmails(event.description),
+      ...extractEmails(event.location),
+      ...(Array.isArray(event.attendees)
+        ? event.attendees.flatMap((attendee) => extractEmails(attendee?.email))
+        : []),
+    ]),
+  );
+
   return {
     id: event.id ?? startsAt,
     patientId: null,
-    patientName: event.summary?.trim() || "Evento de Google Calendar",
+    patientName: summary,
     startsAt,
     endsAt: resolveIsoDate(event?.end?.dateTime ?? event?.end?.date),
     status: normalizeExternalStatus(event.status),
     sourceProvider: "google_calendar",
+    eventTitle: summary,
+    candidateEmails,
+    matchingText: [summary, event.description, event.location].filter(Boolean).join(" "),
   };
 }
 
@@ -398,6 +565,22 @@ function mapAgendaProBooking(booking) {
   const clientFirstName = getFirstValue(booking, ["client.first_name", "customer.first_name"]);
   const clientLastName = getFirstValue(booking, ["client.last_name", "customer.last_name"]);
   const clientName = `${clientFirstName ?? ""} ${clientLastName ?? ""}`.trim();
+  const eventTitle =
+    getFirstValue(booking, ["service_name", "service.name", "title", "client_name"]) ||
+    "Reserva AgendaPro";
+  const candidateEmails = Array.from(
+    new Set([
+      ...extractEmails(
+        getFirstValue(booking, [
+          "client.email",
+          "customer.email",
+          "email",
+          "contact.email",
+        ]),
+      ),
+      ...extractEmails(JSON.stringify(booking)),
+    ]),
+  );
 
   return {
     id: String(getFirstValue(booking, ["id", "uuid"]) ?? startsAt),
@@ -426,6 +609,9 @@ function mapAgendaProBooking(booking) {
       getFirstValue(booking, ["status", "booking_status", "state"]),
     ),
     sourceProvider: "agendapro",
+    eventTitle: String(eventTitle),
+    candidateEmails,
+    matchingText: JSON.stringify(booking),
     locationId: getFirstValue(booking, ["location_id", "location.id"]),
     providerId: getFirstValue(booking, [
       "provider_id",
